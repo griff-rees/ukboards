@@ -23,7 +23,7 @@ UK Boards
 Query UK company and charity board networks.
 
 
-* Free software: GNU General Public License v3
+* Free software: MIT License
 * Documentation: https://uk-boards.readthedocs.io.
 
 
