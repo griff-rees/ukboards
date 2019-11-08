@@ -1,0 +1,5 @@
+Click==7.0
+networkx==2.4
+requests==2.22.0
+zeep==3.4.0
+python-dotenv==0.10.3
