@@ -13,13 +13,12 @@ UK Boards
         :target: https://uk-boards.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
 .. image:: https://pyup.io/repos/github/spool/uk_boards/shield.svg
      :target: https://pyup.io/repos/github/spool/uk_boards/
      :alt: Updates
 
-.. image:: https://codecov.io/gh/codecov/example-python/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/codecov/example-python
+.. image:: https://codecov.io/gh/spool/uk_boards/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/spool/uk_boards
 
 
 Query UK company and charity board networks.
