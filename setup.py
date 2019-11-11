@@ -21,7 +21,7 @@ requirements = [
 
 setup_requirements = ['pytest-runner']
 
-test_requirements = ['pytest>=3', 'tox==3.14.0']
+test_requirements = ['pytest>=3', 'requests_mock']
 
 setup(
     author="Griffith Rees",
