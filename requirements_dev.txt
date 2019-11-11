@@ -10,4 +10,5 @@ twine==2.0.0
 pytest==5.2.2
 pytest-sugar==0.9.2
 pytest-runner==5.2
+pytest-cov==2.8.1
 requests-mock==1.7.0
