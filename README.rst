@@ -18,6 +18,8 @@ UK Boards
      :target: https://pyup.io/repos/github/spool/uk_boards/
      :alt: Updates
 
+.. image:: https://codecov.io/gh/codecov/example-python/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/codecov/example-python
 
 
 Query UK company and charity board networks.
