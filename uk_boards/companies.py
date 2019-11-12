@@ -9,8 +9,9 @@ import networkx
 
 import os
 
+from typing import Any, Dict, Optional, Union
+
 import requests
-from requests.auth import HTTPBasicAuth
 
 import time
 
@@ -21,14 +22,23 @@ load_dotenv()
 
 
 COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
-COMPANIES_HOUSE_AUTH = HTTPBasicAuth(os.getenv("COMPANIES_HOUSE_KEY"), "")
+COMPANIES_HOUSE_KEY = os.getenv("COMPANIES_HOUSE_KEY")
 
 
-def safe_companies_house_query(url, auth=COMPANIES_HOUSE_AUTH, sleep_time=60):
+JSONDict = Dict[str, Any]
+
+
+def safe_companies_house_query(url: str,
+                               auth_key: str = COMPANIES_HOUSE_KEY,
+                               sleep_time: int = 60) -> Optional[JSONDict]:
     """Query url, if error wait for rate limit and try again, return json."""
+    # By default an auth_tuple is (username, password), but for companies_house
+    # api the standard username position needs the api_key and the password
+    # position is kept blank.
+    auth_tuple = (auth_key, "")
     trials = 6
     while trials:
-        response = requests.get(COMPANIES_HOUSE_URL + url, auth=auth)
+        response = requests.get(COMPANIES_HOUSE_URL + url, auth=auth_tuple)
         if response.status_code == 200:
             return response.json()
         logger.warning('Status code {0} from {1}'.format(response.status_code,
@@ -50,7 +60,7 @@ def safe_companies_house_query(url, auth=COMPANIES_HOUSE_AUTH, sleep_time=60):
     raise Exception("Failed 5 attempts querying " + url)
 
 
-def correct_company_number(company_number):
+def correct_company_number(company_number: Union[int, str]) -> str:
     """Enforce correct company number as string of length >= 8."""
     company_number = str(company_number)
     if len(company_number) < 8:
