@@ -30,15 +30,17 @@ JSONDict = Dict[str, Any]
 
 def safe_companies_house_query(url: str,
                                auth_key: str = COMPANIES_HOUSE_KEY,
-                               sleep_time: int = 60) -> Optional[JSONDict]:
+                               sleep_time: int = 60,
+                               url_prefix: str = COMPANIES_HOUSE_URL,
+                               trials: int = 6,
+                               ) -> Optional[JSONDict]:
     """Query url, if error wait for rate limit and try again, return json."""
     # By default an auth_tuple is (username, password), but for companies_house
     # api the standard username position needs the api_key and the password
     # position is kept blank.
     auth_tuple = (auth_key, "")
-    trials = 6
     while trials:
-        response = requests.get(COMPANIES_HOUSE_URL + url, auth=auth_tuple)
+        response = requests.get(url_prefix + url, auth=auth_tuple)
         if response.status_code == 200:
             return response.json()
         logger.warning('Status code {0} from {1}'.format(response.status_code,
@@ -53,7 +55,7 @@ def safe_companies_house_query(url: str,
         if response.status_code == 502:
             # Server error, expecting an overload issue (hence adding to wait)
             logger.warning('Adding a {} sec wait'.format(2*sleep_time))
-            time.sleep(sleep_time*2)
+            time.sleep(sleep_time)
         logger.warning('Trying again in {} seconds...'.format(sleep_time))
         time.sleep(sleep_time)
         trials -= 1

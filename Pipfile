@@ -30,6 +30,7 @@ pytest-runner = "==5.2"
 pytest-cov = "==2.8.1"
 requests-mock = "==1.7.0"
 Sphinx = "==2.2.1"
+pytest-remotedata = "==0.3.2"
 
 [requires]
 python_version = "3.7"

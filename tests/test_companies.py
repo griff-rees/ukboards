@@ -3,6 +3,8 @@
 
 """Tests for `Companies House` quries, companies and board networks."""
 
+import pytest
+
 from uk_boards.companies import (correct_company_number, COMPANIES_HOUSE_URL,
                                  safe_companies_house_query)
 
@@ -64,3 +66,20 @@ class TestBasicQueries:
         output = safe_companies_house_query('/company/' + test_company_number)
         assert output is None
         assert [rec.message for rec in caplog.records] == correct_log_output
+
+    @pytest.mark.remote_data
+    def test_basic_company_query(self, caplog):
+        """Test an actual company house query, skipped by default.
+
+        At present there is no way to run Companies House queries without a
+        registered API key, so this test is only run if `--remote-data` is
+        enabled and if a Companies House api key is not included as configured
+        by default in a `.env` file then it will fail.
+        """
+        test_company_number = '04547069'
+        correct_output = '{"status": "active", "company_number": "PUNCHDRUNK"}'
+        output = safe_companies_house_query('/company/' + test_company_number,
+                                            trials=1, sleep_time=10)
+        for key, value in correct_output:
+            assert output[key] == value
+        assert caplog.records == []
