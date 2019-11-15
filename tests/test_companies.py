@@ -6,24 +6,28 @@
 import pytest
 
 from uk_boards.companies import (stringify_company_number, COMPANIES_HOUSE_URL,
-                                 companies_house_query)
+                                 companies_house_query,
+                                 CompaniesHousePermissionError)
+from uk_boards.utils import CHECK_EXTERNAL_IP_ADDRESS_GOOGLE
 
 
 class TestCorrectCompanyNumber:
 
     """Test correcting company numbers passed as int or str return str."""
 
+    CORRECT_COMPANY_ID = '00877987'
+
     def test_short_company_number_as_int(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = 877987
-        CORRECT_COMPANY_ID = '00877987'
-        assert stringify_company_number(TEST_COMPANY_ID) == CORRECT_COMPANY_ID
+        assert (stringify_company_number(TEST_COMPANY_ID) ==
+                self.CORRECT_COMPANY_ID)
 
     def test_short_company_number_as_str(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = '877987'
-        CORRECT_COMPANY_ID = '00877987'
-        assert stringify_company_number(TEST_COMPANY_ID) == CORRECT_COMPANY_ID
+        assert (stringify_company_number(TEST_COMPANY_ID) ==
+                self.CORRECT_COMPANY_ID)
 
 
 class TestBasicQueries:
@@ -39,6 +43,8 @@ class TestBasicQueries:
           pytest by default once installed
     """
 
+    CORRECT_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
+
     @staticmethod
     def _company_url(company_number: str) -> str:
         return (COMPANIES_HOUSE_URL + '/company/' +
@@ -46,13 +52,37 @@ class TestBasicQueries:
 
     def test_correct_company_query(self, requests_mock, caplog):
         """Test a correct default query (200 status)."""
-        test_company_number = '04547069'
         correct_output = '{"status": "active", "company_number": "PUNCHDRUNK"}'
-        requests_mock.get(self._company_url(test_company_number),
+        requests_mock.get(self._company_url(self.CORRECT_COMPANY_ID),
                           json=correct_output)
-        output = companies_house_query('/company/' + test_company_number)
+        output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID)
         assert output == correct_output
         assert caplog.records == []
+
+    def test_403_query(self, requests_mock, caplog):
+        """Test raising `CompaniesHousePermissionError`."""
+        external_ip = '1.1.1.1'
+        correct_log_output = [
+            f'Status code 403 from /company/{self.CORRECT_COMPANY_ID}',
+        ]
+        correct_error_message = (f'Query: /company/{self.CORRECT_COMPANY_ID}\n'
+                                 'returned a 403 (forbidden) error. If that '
+                                 'query seems correct, check the '
+                                 'COMPANIES_HOUSE_KEY is set in your local '
+                                 '.env file. If it is correct, check the '
+                                 'external IP address of this computer '
+                                 f'({external_ip}) is included in the list '
+                                 'of Restricted IPs on your registered '
+                                 'Companies House API Key.')
+        requests_mock.get(CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
+                          text=external_ip)
+        requests_mock.get(self._company_url(self.CORRECT_COMPANY_ID),
+                          status_code=403)
+        with pytest.raises(CompaniesHousePermissionError) as exec_info:
+            companies_house_query('/company/' + self.CORRECT_COMPANY_ID)
+        assert [rec.message for rec in caplog.records] == correct_log_output
+        assert exec_info.type == CompaniesHousePermissionError
+        assert exec_info.value.message == correct_error_message
 
     def test_404_company_query(self, requests_mock, caplog):
         """Test a missing company query (404) is correctly logged."""
@@ -79,10 +109,9 @@ class TestBasicQueries:
         key is registered for then it will likely return a 403 `forbidden`
         error.
         """
-        test_company_number = '04547069'
         correct_output = '{"status": "active", "company_number": "PUNCHDRUNK"}'
-        output = companies_house_query('/company/' + test_company_number,
-                                       trials=1, sleep_time=10)
+        output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID,
+                                       max_trials=1, sleep_time=10)
         for key, value in correct_output:
             assert output[key] == value
         assert caplog.records == []

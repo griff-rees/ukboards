@@ -12,14 +12,15 @@ import os
 from typing import Any, Dict, Optional, Union
 
 import requests
+from requests.exceptions import ConnectionError
 
 import time
 
+from .utils import InternetConnectionError, get_external_ip_address
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-
 
 COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
 COMPANIES_HOUSE_KEY = os.getenv("COMPANIES_HOUSE_KEY")
@@ -63,26 +64,54 @@ def companies_house_query(query: str,
     auth_tuple = (auth_key, "")
     trials = max_trials
     while trials:
-        response = requests.get(url_prefix + query, auth=auth_tuple)
+        try:
+            response = requests.get(url_prefix + query, auth=auth_tuple)
+        except ConnectionError:
+            raise InternetConnectionError
         if response.status_code == 200:
             return response.json()
-        logger.warning('Status code {0} from {1}'.format(response.status_code,
-                                                         query))
+        logger.warning(f'Status code {response.status_code} from {query}')
+        if response.status_code == 403:
+            raise CompaniesHousePermissionError(query)
         if response.status_code == 404:
-            logger.error('Skipping ' + query)
+            logger.error(f'Skipping {query}')
             return None
         if response.status_code == 500:
-            logger.warning('Will skip after 1 repeat')
+            logger.warning(f'Will skip after {max_trials - trials} repeat')
             if trials < max_trials - 1:
                 return None
         if response.status_code == 502:
             # Server error, expecting an overload issue (hence adding to wait)
-            logger.warning('Adding a {} sec wait'.format(sleep_time))
+            logger.warning(f'Adding a {sleep_time} sec wait')
             time.sleep(sleep_time)
-        logger.warning('Trying again in {} seconds...'.format(sleep_time))
-        time.sleep(sleep_time)
-        trials -= 1
-    raise Exception("Failed {} attempts querying ".format(max_trials) + query)
+        else:
+            logger.warning(f'Trying again in {sleep_time} seconds...')
+            time.sleep(sleep_time)
+            trials -= 1
+    raise Exception(f"Failed {max_trials} attempt(s) querying {query}")
+
+
+class CompaniesHousePermissionError(Exception):
+
+    """An exception for handling 403 forbidden errors."""
+
+    def __init__(self, query: str = None, message: str = None) -> None:
+        """Either set passed message or set to _default_error_message()."""
+        self.query = query
+        self.message = message or self._default_error_message()
+
+    def __str__(self) -> str:
+        return self.message
+
+    def _default_error_message(self) -> str:
+        """Try to check current IP address to raise clear permission error."""
+        ip_address = get_external_ip_address()
+        return (f'Query: {self.query}\nreturned a 403 (forbidden) error. If '
+                'that query seems correct, check the COMPANIES_HOUSE_KEY '
+                'is set in your local .env file. If it is correct, check '
+                f'the external IP address of this computer ({ip_address}) is '
+                'included in the list of Restricted IPs on your registered '
+                'Companies House API Key.')
 
 
 def stringify_company_number(company_number: Union[int, str]) -> str:
@@ -102,6 +131,7 @@ def get_company_network(company_number='04547069', branches=0,):
         * Test officers error on company '01086582'
         * Consider removing print statement within the related loop
         * Refactor todo info into documentation
+        * Add option of including network collected prior to error
     """
     g = networkx.Graph()
     logger.debug('Querying board network from {}'.format(company_number))
