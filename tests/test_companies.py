@@ -66,8 +66,8 @@ class TestBasicQueries:
             f'Status code 403 from /company/{self.CORRECT_COMPANY_ID}',
         ]
         correct_error_message = (f'Query: /company/{self.CORRECT_COMPANY_ID}\n'
-                                 'returned a 403 (forbidden) error). If that '
-                                 'query seems correct, check your '
+                                 'returned a 403 (forbidden) error. If that '
+                                 'query seems correct, check the '
                                  'COMPANIES_HOUSE_KEY is set in your local '
                                  '.env file. If it is correct, check the '
                                  'external IP address of this computer '

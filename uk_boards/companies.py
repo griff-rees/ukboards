@@ -84,9 +84,10 @@ def companies_house_query(query: str,
             # Server error, expecting an overload issue (hence adding to wait)
             logger.warning(f'Adding a {sleep_time} sec wait')
             time.sleep(sleep_time)
-        logger.warning(f'Trying again in {sleep_time} seconds...')
-        time.sleep(sleep_time)
-        trials -= 1
+        else:
+            logger.warning(f'Trying again in {sleep_time} seconds...')
+            time.sleep(sleep_time)
+            trials -= 1
     raise Exception(f"Failed {max_trials} attempt(s) querying {query}")
 
 
@@ -105,12 +106,12 @@ class CompaniesHousePermissionError(Exception):
     def _default_error_message(self) -> str:
         """Try to check current IP address to raise clear permission error."""
         ip_address = get_external_ip_address()
-        return (f'Query: {self.query}\nreturned a 403 (forbidden) error). If '
-                'that query seems correct, check your COMPANIES_HOUSE_KEY '
+        return (f'Query: {self.query}\nreturned a 403 (forbidden) error. If '
+                'that query seems correct, check the COMPANIES_HOUSE_KEY '
                 'is set in your local .env file. If it is correct, check '
                 f'the external IP address of this computer ({ip_address}) is '
                 'included in the list of Restricted IPs on your registered '
-                'Companies House API Key. ')
+                'Companies House API Key.')
 
 
 def stringify_company_number(company_number: Union[int, str]) -> str:
@@ -130,6 +131,7 @@ def get_company_network(company_number='04547069', branches=0,):
         * Test officers error on company '01086582'
         * Consider removing print statement within the related loop
         * Refactor todo info into documentation
+        * Add option of including network collected prior to error
     """
     g = networkx.Graph()
     logger.debug('Querying board network from {}'.format(company_number))
