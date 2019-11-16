@@ -52,7 +52,7 @@ class TestBasicQueries:
 
     def test_correct_company_query(self, requests_mock, caplog):
         """Test a correct default query (200 status)."""
-        correct_output = '{"status": "active", "company_number": "PUNCHDRUNK"}'
+        correct_output = '{"status": "active", "company_name": "PUNCHDRUNK"}'
         requests_mock.get(self._company_url(self.CORRECT_COMPANY_ID),
                           json=correct_output)
         output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID)
@@ -109,9 +109,9 @@ class TestBasicQueries:
         key is registered for then it will likely return a 403 `forbidden`
         error.
         """
-        correct_output = '{"status": "active", "company_number": "PUNCHDRUNK"}'
+        correct_output = {"status": "active", "company_name": "PUNCHDRUNK"}
         output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID,
                                        max_trials=1, sleep_time=10)
-        for key, value in correct_output:
+        for key, value in correct_output.items():
             assert output[key] == value
         assert caplog.records == []

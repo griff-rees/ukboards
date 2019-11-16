@@ -71,7 +71,7 @@ def companies_house_query(query: str,
         if response.status_code == 200:
             return response.json()
         logger.warning(f'Status code {response.status_code} from {query}')
-        if response.status_code == 403:
+        if response.status_code in (403, 401):
             raise CompaniesHousePermissionError(query)
         if response.status_code == 404:
             logger.error(f'Skipping {query}')
@@ -81,14 +81,15 @@ def companies_house_query(query: str,
             if trials < max_trials - 1:
                 return None
         if response.status_code == 502:
-            # Server error, expecting an overload issue (hence adding to wait)
+            # Server error, likely an overload issue (hence adding to wait)
             logger.warning(f'Adding a {sleep_time} sec wait')
             time.sleep(sleep_time)
-        else:
-            logger.warning(f'Trying again in {sleep_time} seconds...')
-            time.sleep(sleep_time)
-            trials -= 1
-    raise Exception(f"Failed {max_trials} attempt(s) querying {query}")
+        logger.warning(f'Trying again in {sleep_time} seconds...')
+        time.sleep(sleep_time)
+        trials -= 1
+    raise Exception(
+            f"Failed {max_trials} attempt(s) querying "
+            f"{url_prefix + query}")
 
 
 class CompaniesHousePermissionError(Exception):
