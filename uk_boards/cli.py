@@ -19,9 +19,6 @@ from .companies import companies_house_query
 @click.pass_context
 def main(ctx, indent):
     """Console script for uk_boards."""
-    click.echo("Replace this message by putting your code into "
-               "uk_boards.cli.main")
-    click.echo("See click documentation at https://click.palletsprojects.com/")
     ctx.ensure_object(dict)
 
     ctx.obj['indent'] = indent
