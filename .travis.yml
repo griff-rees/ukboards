@@ -13,5 +13,6 @@ deploy:
   password:
     secure: 3ueoJdVg6cE0Q/eDGaaqGxXoZDfIM/cr7P1DHqTKPPk06kYVTeqr7Hg51R497TYfww5Rjqe0X0shdthH8Iafg9twH25dACkuFezxu/yYy3hrNPMfL+fsVADJ8fD2OOGoO6EfPIF76SfLiAEXZ5DgNXZwjfOGQ7aakjYgvcERHvz9ux7UsRFEFnFRjCh+uTq/06x+iezTUQv7CpikAmO5XQjuGlscoY8E+1KG4DCL//uCn9YCQ8W3Jwpar8Cwct0YVNHBk3uhKRopGWENizqSLwsRcs8agzq7RkR/Q4HRXxDNqrjfIwHqlpHNDEw6nZ0+swPXfN22UHLlZtl7TM7psfq3EI35RKn4EBY9Xa5ua//co1XVOIcl9vT8th6lAiLZ0bqshEzD+1/+Y9MJYCxu9RaaEf+OzIh78Nj9FFKa/X0VlE/5nMpsZAVBTQwDDdzufoNDeKuJMR/rWBgKwT3pNRHE05NFnAoUJsunDe+Hv69pkta7Gavri32nmScluVdzZkAhLzQrBxfHE6B0g/WqnRAVokUjwSSLnjptMGCDuBFb+Nrw/OkgzuI33hw3k5P6DQ/NVZ7msb3x8iWTy4t5TXvGXwh5/sDmc/2eB6s7jTlz1VlqmlyliYIrfH+LqUyg2QDFb8I+6ACbtLAftvQom1uhM+cP7jyidmLgH5uLnr8=
   on:
+    tags: true
     repo: spool/uk_boards
     python: 3.8
