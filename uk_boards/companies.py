@@ -96,7 +96,7 @@ class CompaniesHousePermissionError(Exception):
 
     """An exception for handling 403 forbidden errors."""
 
-    def __init__(self, query: str = None, message: str = None) -> None:
+    def __init__(self, query: str = None, message: str = None, ) -> None:
         """Either set passed message or set to _default_error_message()."""
         self.query = query
         self.message = message or self._default_error_message()
@@ -107,12 +107,12 @@ class CompaniesHousePermissionError(Exception):
     def _default_error_message(self) -> str:
         """Try to check current IP address to raise clear permission error."""
         ip_address = get_external_ip_address()
-        return (f'Query: {self.query}\nreturned a 403 (forbidden) error. If '
-                'that query seems correct, check the COMPANIES_HOUSE_KEY '
-                'is set in your local .env file. If it is correct, check '
-                f'the external IP address of this computer ({ip_address}) is '
-                'included in the list of Restricted IPs on your registered '
-                'Companies House API Key.')
+        return (f'Query: {self.query}\nreturned a 403 (forbidden) error. '
+                'If that query seems correct, check the COMPANIES_HOUSE_KEY '
+                'is set in your local .env file.\n'
+                'If both are correct, check the external IP address of '
+                f'this computer ({ip_address}) is included in the list of '
+                'Restricted IPs on your registered Companies House API Key.')
 
 
 def stringify_company_number(company_number: Union[int, str]) -> str:

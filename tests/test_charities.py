@@ -89,8 +89,7 @@ class TestZeepCharityClient:
     def test_adding_raw(self):
         """Test raw_response and history plugin."""
         history = HistoryPlugin(maxlen=20)
-        charities_auth = CharitiesAuthPlugin()
-        history_client = get_client(plugins=[history, charities_auth])
+        history_client = get_client(plugins=[history, CharitiesAuthPlugin()])
         with history_client.settings(raw_response=True):
             raw_response = history_client.service.GetCharitiesByName(
                 strSearch='TATE GALLERY FOUNDATION')

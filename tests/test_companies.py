@@ -69,8 +69,8 @@ class TestBasicQueries:
                                  'returned a 403 (forbidden) error. If that '
                                  'query seems correct, check the '
                                  'COMPANIES_HOUSE_KEY is set in your local '
-                                 '.env file. If it is correct, check the '
-                                 'external IP address of this computer '
+                                 '.env file.\nIf both are correct, check '
+                                 'the external IP address of this computer '
                                  f'({external_ip}) is included in the list '
                                  'of Restricted IPs on your registered '
                                  'Companies House API Key.')
@@ -110,7 +110,8 @@ class TestBasicQueries:
         error.
         """
         correct_output = {"status": "active", "company_name": "PUNCHDRUNK"}
-        output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID,
+        output = companies_house_query('/company/' +
+                                       self.CORRECT_COMPANY_ID,
                                        max_trials=1, sleep_time=10)
         for key, value in correct_output.items():
             assert output[key] == value
