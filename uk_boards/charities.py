@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-CHARITY_COMMISSION_WSDL = ('http://apps.charitycommission.gov.uk/'
+CHARITY_COMMISSION_WSDL = ('https://apps.charitycommission.gov.uk/'
                            'Showcharity/API/SearchCharitiesV1/'
                            'SearchCharitiesV1.asmx?wsdl')
 
