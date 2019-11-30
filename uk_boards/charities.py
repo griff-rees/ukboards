@@ -9,8 +9,6 @@ import networkx
 
 import os
 
-from requests import Session
-
 from typing import List, Optional
 
 from zeep import Client, Settings, Plugin
@@ -26,31 +24,55 @@ CHARITY_COMMISSION_WSDL = ('http://apps.charitycommission.gov.uk/'
 
 CHARITY_COMMISSION_API_KEY = os.environ.get("CHARITY_KEY")
 
-API_KEY_NAME = 'APIKey'
+CHARITY_COMMISSION_API_KEY_NAME = 'APIKey'
+
+
+class CharitiesAuthPlugin(Plugin):
+
+    """Add an APIKey to each request."""
+
+    def __init__(self,
+                 api_key_name: str = CHARITY_COMMISSION_API_KEY_NAME,
+                 api_key_value: str = CHARITY_COMMISSION_API_KEY) -> None:
+        """Initialise api_key_name and api_key_value."""
+        self.api_key_name = api_key_name
+        self.api_key_value = api_key_value
+
+    def egress(self, envelope, http_headers, operation, binding_options):
+        """Auto add to the envelope (or replace) Charity api_key.
+
+        :param envelope: The envelope as XML node
+        :param http_headers: Dict with the HTTP headers
+        :param operation: The associated Operation instance
+        :param binding_options: Binding specific options for the operation
+        """
+        for element in operation.input.body.type.elements:
+            if (element[0] == self.api_key_name and
+                    element[1].name == self.api_key_name):
+                key_type = element[1]
+                key_type.render(envelope[0][0], self.api_key_value)
+        return envelope, http_headers
 
 
 def get_client(wsdl: str = CHARITY_COMMISSION_WSDL,
                raw_response: bool = False,
-               plugins: List[Plugin] = None,
-               session: Session = None) -> Client:
+               plugins: List[Plugin] = None, **kwargs) -> Client:
     """Generate a Client for querying Charities Commision API."""
     settings = Settings(strict=False, xml_huge_tree=True,
                         raw_response=raw_response)
-    return Client(wsdl=wsdl, settings=settings, plugins=plugins)
+    plugins = [CharitiesAuthPlugin()] if not plugins else plugins
+    return Client(wsdl=wsdl, settings=settings, plugins=plugins, **kwargs)
 
 
-def check_registered_charity_number(search: str, charity_number: int,
-                                    client: Client = None,
-                                    api_key: str = CHARITY_COMMISSION_API_KEY
-                                    ) -> int:
-    """Check if registered charity number is a correct one."""
+def check_registered_charity_number(name: str,
+                                    charity_number: int,
+                                    client: Client = None, ) -> int:
+    """Check if registered charity_number matches searched name."""
     if not client:
         client = get_client()
-    charities = client.service.GetCharitiesByName(APIKey=api_key,
-                                                  strSearch=search,)
+    charities = client.service.GetCharitiesByName(strSearch=name,)
     for charity in charities:
         charity_data = client.service.GetCharityByRegisteredCharityNumber(
-            APIKey=api_key,
             registeredCharityNumber=charity['RegisteredCharityNumber'],)
         if charity_data['CharityNumber'] == charity_number:
             return charity_data['RegisteredCharityNumber']
@@ -61,13 +83,14 @@ def check_registered_charity_number(search: str, charity_number: int,
 def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                         branches: int = 0,
                         client: Client = None,
+                        api_key: str = CHARITY_COMMISSION_API_KEY,
                         test_name: str = None) -> Optional[networkx.Graph]:
     g = networkx.Graph()
     if not client:
         client = get_client()
     try:
         charity_data = client.service.GetCharityByRegisteredCharityNumber(
-            APIKey=os.environ.get("CHARITY_KEY"),
+            APIKey=api_key,
             registeredCharityNumber=charity_number,)
     except Fault:
         logger.error(f'Fault error pulling for {charity_number}')
@@ -79,7 +102,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                            "this Arts Council Instition")
             return
     charity_name = charity_data['CharityName']
-    if test_name:  # Test the name of the queried  Charity fits the intended
+    if test_name:  # Test the name of the queried Charity is the intended
         try:
             assert charity_name == test_name
         except AssertionError:
@@ -95,7 +118,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
     logger.debug(charity_name)
     for subsidiary in range(charity_data['SubsidiaryNumber'] + 1):
         trustees = client.service.GetCharityTrustees(
-            APIKey=os.environ.get("CHARITY_KEY"),
+            APIKey=api_key,
             registeredCharityNumber=charity_number,
             subsidiaryNumber=subsidiary)
         if not trustees:

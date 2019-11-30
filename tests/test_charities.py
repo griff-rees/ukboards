@@ -3,9 +3,12 @@
 
 """Test querying Charities Commision API."""
 
+import pytest
+
 from zeep.plugins import HistoryPlugin
 
-from uk_boards.charities import check_registered_charity_number, get_client
+from uk_boards.charities import (check_registered_charity_number, get_client,
+                                 CharitiesAuthPlugin)
 
 
 TEST_WSDL_CODE = 'http://a-test-api-code.uk/apiTest.asmx?wsdl'
@@ -82,28 +85,51 @@ class TestZeepCharityClient:
         assert test_client.settings.strict is False
         assert test_client.settings.xml_huge_tree is True
 
+    @pytest.mark.remote_data
+    def test_adding_raw(self):
+        """Test raw_response and history plugin."""
+        history = HistoryPlugin(maxlen=20)
+        charities_auth = CharitiesAuthPlugin()
+        history_client = get_client(plugins=[history, charities_auth])
+        with history_client.settings(raw_response=True):
+            raw_response = history_client.service.GetCharitiesByName(
+                strSearch='TATE GALLERY FOUNDATION')
+            assert raw_response.status_code == 200
+            # with open('tests/charity_soap.wsdl', 'rb') as test_output:
+            #     raw_test_output = test_output.read().strip(' ')
+            #     assert raw_response.content == raw_test_output
+        assert history.last_sent['envelope'][0][0].tag.endswith(
+            'GetCharitiesByName')
+        assert len(history._buffer) == 1
+        response = history_client.service.GetCharitiesByName(
+            strSearch='TATE GALLERY FOUNDATION')
+        assert response[0]['CharityName'].rstrip() == (
+            'THE TATE GALLERY FOUNDATION')
+        assert history.last_received['envelope'][0][0].tag.endswith(
+            'GetCharitiesByNameResponse')
+        assert len(history._buffer) == 2
+
 
 class TestGetCharityNumber:
 
     """Test querying basic charity data."""
 
-    def test_check_registered_charity_number(self, requests_mock):
+    @pytest.mark.remote_data
+    def test_check_registered_charity_number(self):
         """Test on Photography's Gallery Limited."""
         correct_charity_name = (
             "THE PHOTOGRAPHERS' GALLERY LTD                    "
             "                                                  "
             "                                                  ")
         correct_charity_number = 262548
-        test_address = ('http://apps.charitycommission.gov.uk/'
-                        'Showcharity/API/SearchCharitiesV1/'
-                        'SearchCharitiesV1.asmx?wsdl')
-        history = HistoryPlugin()
-        requests_mock.get(test_address, text=TEST_SOAP_QUERY)
-        history_client = get_client(plugins=[history], raw_response=True)
+        # test_address = ('http://apps.charitycommission.gov.uk/'
+        #                 'Showcharity/API/SearchCharitiesV1/'
+        #                 'SearchCharitiesV1.asmx?wsdl')
+        # history = HistoryPlugin()
+        # requests_mock.get(test_address, text=TEST_SOAP_QUERY)
+        # history_client = get_client()
+        charity = check_registered_charity_number(correct_charity_name, 262548)
         # charity = check_registered_charity_number(correct_charity_name,
-        #                                           262548,
+        #                                           correct_charity_number,
         #                                           client=history_client)
-        charity = check_registered_charity_number(correct_charity_name,
-                                                  correct_charity_number,
-                                                  client=history_client)
         assert charity == correct_charity_number
