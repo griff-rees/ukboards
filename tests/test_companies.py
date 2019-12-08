@@ -11,6 +11,10 @@ from uk_boards.companies import (stringify_company_number, COMPANIES_HOUSE_URL,
 from uk_boards.utils import CHECK_EXTERNAL_IP_ADDRESS_GOOGLE
 
 
+PUNCHDRUNK_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
+PUNCHDRUNK_JSON_SUBSET = '{"status": "active", "company_name": "PUNCHDRUNK"}'
+
+
 class TestCorrectCompanyNumber:
 
     """Test correcting company numbers passed as int or str return str."""
@@ -43,8 +47,6 @@ class TestBasicQueries:
           pytest by default once installed
     """
 
-    CORRECT_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
-
     @staticmethod
     def _company_url(company_number: str) -> str:
         return (COMPANIES_HOUSE_URL + '/company/' +
@@ -52,20 +54,19 @@ class TestBasicQueries:
 
     def test_correct_company_query(self, requests_mock, caplog):
         """Test a correct default query (200 status)."""
-        correct_output = '{"status": "active", "company_name": "PUNCHDRUNK"}'
-        requests_mock.get(self._company_url(self.CORRECT_COMPANY_ID),
-                          json=correct_output)
-        output = companies_house_query('/company/' + self.CORRECT_COMPANY_ID)
-        assert output == correct_output
+        requests_mock.get(self._company_url(PUNCHDRUNK_COMPANY_ID),
+                          json=PUNCHDRUNK_JSON_SUBSET)
+        output = companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID)
+        assert output == PUNCHDRUNK_JSON_SUBSET
         assert caplog.records == []
 
     def test_403_query(self, requests_mock, caplog):
         """Test raising `CompaniesHousePermissionError`."""
         external_ip = '1.1.1.1'
         correct_log_output = [
-            f'Status code 403 from /company/{self.CORRECT_COMPANY_ID}',
+            f'Status code 403 from /company/{PUNCHDRUNK_COMPANY_ID}',
         ]
-        correct_error_message = (f'Query: /company/{self.CORRECT_COMPANY_ID}\n'
+        correct_error_message = (f'Query: /company/{PUNCHDRUNK_COMPANY_ID}\n'
                                  'returned a 403 (forbidden) error. If that '
                                  'query seems correct, check the '
                                  'COMPANIES_HOUSE_KEY is set in your local '
@@ -76,10 +77,10 @@ class TestBasicQueries:
                                  'Companies House API Key.')
         requests_mock.get(CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                           text=external_ip)
-        requests_mock.get(self._company_url(self.CORRECT_COMPANY_ID),
+        requests_mock.get(self._company_url(PUNCHDRUNK_COMPANY_ID),
                           status_code=403)
         with pytest.raises(CompaniesHousePermissionError) as exec_info:
-            companies_house_query('/company/' + self.CORRECT_COMPANY_ID)
+            companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID)
         assert [rec.message for rec in caplog.records] == correct_log_output
         assert exec_info.type == CompaniesHousePermissionError
         assert exec_info.value.message == correct_error_message
@@ -109,10 +110,8 @@ class TestBasicQueries:
         key is registered for then it will likely return a 403 `forbidden`
         error.
         """
-        correct_output = {"status": "active", "company_name": "PUNCHDRUNK"}
-        output = companies_house_query('/company/' +
-                                       self.CORRECT_COMPANY_ID,
+        output = companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID,
                                        max_trials=1, sleep_time=10)
-        for key, value in correct_output.items():
+        for key, value in PUNCHDRUNK_JSON_SUBSET.items():
             assert output[key] == value
         assert caplog.records == []

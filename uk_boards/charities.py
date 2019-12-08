@@ -56,11 +56,14 @@ class CharitiesAuthPlugin(Plugin):
 
 def get_client(wsdl: str = CHARITY_COMMISSION_WSDL,
                raw_response: bool = False,
+               api_key_name: str = CHARITY_COMMISSION_API_KEY_NAME,
+               api_key_value: str = CHARITY_COMMISSION_API_KEY,
                plugins: List[Plugin] = None, **kwargs) -> Client:
     """Generate a Client for querying Charities Commision API."""
     settings = Settings(strict=False, xml_huge_tree=True,
                         raw_response=raw_response)
-    plugins = [CharitiesAuthPlugin()] if not plugins else plugins
+    plugins = [CharitiesAuthPlugin(api_key_name,
+                                   api_key_value)] if not plugins else plugins
     return Client(wsdl=wsdl, settings=settings, plugins=plugins, **kwargs)
 
 

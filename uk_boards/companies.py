@@ -123,7 +123,8 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
     return company_number
 
 
-def get_company_network(company_number='04547069', branches=0,):
+def get_company_network(company_number: int = '04547069',
+                        branches: int = 0,) -> Optional[networkx.Graph]:
     """
     Query the network of board members recursively.
 
