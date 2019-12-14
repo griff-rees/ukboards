@@ -6,6 +6,8 @@ from requests.exceptions import ConnectionError
 
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
+DEFAULT_API_KEY_PATH = '.env'
+
 
 class InternetConnectionError(Exception):
 

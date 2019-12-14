@@ -12,6 +12,12 @@ from uk_boards.charities import (check_registered_charity_number, get_client,
 
 
 TEST_WSDL_CODE = 'http://a-test-api-code.uk/apiTest.asmx?wsdl'
+PHOTOGRAPHERS_GALLERY_NAME = (
+    "THE PHOTOGRAPHERS' GALLERY LTD                    "
+    "                                                  "
+    "                                                  ")
+PHOTOGRAPHERS_GALLERY_NUMBER = 262548
+
 
 TEST_SOAP_ENV = """\
 <soapenv:Envelope
@@ -116,19 +122,15 @@ class TestGetCharityNumber:
     @pytest.mark.remote_data
     def test_check_registered_charity_number(self):
         """Test on Photography's Gallery Limited."""
-        correct_charity_name = (
-            "THE PHOTOGRAPHERS' GALLERY LTD                    "
-            "                                                  "
-            "                                                  ")
-        correct_charity_number = 262548
         # test_address = ('http://apps.charitycommission.gov.uk/'
         #                 'Showcharity/API/SearchCharitiesV1/'
         #                 'SearchCharitiesV1.asmx?wsdl')
         # history = HistoryPlugin()
         # requests_mock.get(test_address, text=TEST_SOAP_QUERY)
         # history_client = get_client()
-        charity = check_registered_charity_number(correct_charity_name, 262548)
+        charity = check_registered_charity_number(PHOTOGRAPHERS_GALLERY_NAME,
+                                                  PHOTOGRAPHERS_GALLERY_NUMBER)
         # charity = check_registered_charity_number(correct_charity_name,
         #                                           correct_charity_number,
         #                                           client=history_client)
-        assert charity == correct_charity_number
+        assert charity == PHOTOGRAPHERS_GALLERY_NUMBER

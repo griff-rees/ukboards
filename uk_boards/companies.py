@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from dotenv import load_dotenv
-
 import logging
-
-import networkx
-
 import os
+import time
 
 from typing import Any, Dict, Optional, Union
 
+from dotenv import load_dotenv
+
+import networkx
+
 import requests
 from requests.exceptions import ConnectionError
-
-import time
 
 from .utils import InternetConnectionError, get_external_ip_address
 
@@ -22,15 +20,17 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
 COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
-COMPANIES_HOUSE_KEY = os.getenv("COMPANIES_HOUSE_KEY")
+COMPANIES_HOUSE_API_KEY_NAME = "COMPANIES_HOUSE_KEY"
+COMPANIES_HOUSE_API_KEY = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
 
 
 JSONDict = Dict[str, Any]
 
 
 def companies_house_query(query: str,
-                          auth_key: str = COMPANIES_HOUSE_KEY,
+                          auth_key: str = COMPANIES_HOUSE_API_KEY,
                           sleep_time: int = 60,
                           url_prefix: str = COMPANIES_HOUSE_URL,
                           max_trials: int = 6,
@@ -108,8 +108,9 @@ class CompaniesHousePermissionError(Exception):
         """Try to check current IP address to raise clear permission error."""
         ip_address = get_external_ip_address()
         return (f'Query: {self.query}\nreturned a 403 (forbidden) error. '
-                'If that query seems correct, check the COMPANIES_HOUSE_KEY '
-                'is set in your local .env file.\n'
+                'If that query seems correct, check the '
+                f'{COMPANIES_HOUSE_API_KEY_NAME} is set in your local .env '
+                'file.\n'
                 'If both are correct, check the external IP address of '
                 f'this computer ({ip_address}) is included in the list of '
                 'Restricted IPs on your registered Companies House API Key.')

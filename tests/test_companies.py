@@ -5,10 +5,13 @@
 
 import pytest
 
-from uk_boards.companies import (stringify_company_number, COMPANIES_HOUSE_URL,
+from uk_boards.companies import (stringify_company_number,
                                  companies_house_query,
-                                 CompaniesHousePermissionError)
-from uk_boards.utils import CHECK_EXTERNAL_IP_ADDRESS_GOOGLE
+                                 CompaniesHousePermissionError,
+                                 COMPANIES_HOUSE_API_KEY_NAME,
+                                 COMPANIES_HOUSE_URL)
+from uk_boards.utils import (CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
+                             DEFAULT_API_KEY_PATH)
 
 
 PUNCHDRUNK_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
@@ -69,9 +72,10 @@ class TestBasicQueries:
         correct_error_message = (f'Query: /company/{PUNCHDRUNK_COMPANY_ID}\n'
                                  'returned a 403 (forbidden) error. If that '
                                  'query seems correct, check the '
-                                 'COMPANIES_HOUSE_KEY is set in your local '
-                                 '.env file.\nIf both are correct, check '
-                                 'the external IP address of this computer '
+                                 f'{COMPANIES_HOUSE_API_KEY_NAME} is set in '
+                                 f'your local {DEFAULT_API_KEY_PATH} file.\n'
+                                 'If both are correct, check the external IP '
+                                 'address of this computer '
                                  f'({external_ip}) is included in the list '
                                  'of Restricted IPs on your registered '
                                  'Companies House API Key.')

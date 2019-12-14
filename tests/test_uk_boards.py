@@ -24,7 +24,7 @@ Usage: uk_boards [OPTIONS] COMMAND [ARGS]...
   Console script for uk_boards.
 
 Options:
-  -a, --api-keys-path PATH  Path to file with API keys (default=.env)
+  -a, --api-keys-path FILE  Path to file with API keys (default=.env)
   -i, --indent INTEGER      How many spaces to indent printing json queries.
                             [default: 2]
   --help                    Show this message and exit.
@@ -33,22 +33,6 @@ Commands:
   charity            Query Charities Commision by registered charity number.
   company            Query Companies House by company number.
   csv-organisations  Path to csv with company and charity numbers."""
-
-
-@pytest.fixture
-def response():
-    """Sample pytest fixture.
-
-    See more at: http://doc.pytest.org/en/latest/fixture.html
-    """
-    # import requests
-    # return requests.get('https://github.com/audreyr/cookiecutter-pypackage')
-
-
-def test_content(response):
-    """Sample pytest test function with the pytest fixture as an argument."""
-    # from bs4 import BeautifulSoup
-    # assert 'GitHub' in BeautifulSoup(response.content).title.string
 
 
 @pytest.fixture
@@ -112,3 +96,39 @@ class TestCompaniesCommandLineInterface:
     # def test_passing_env_path(self, requests_mock, caplog):
     #     """Test mock querying PUNCHDRUNK."""
     #     runner = CliRunner()
+
+
+class TestCharitiesCommandLineInterface:
+
+    """Test Charity command line options."""
+
+    CHARITIES_HELP = """\
+    Usage: uk_boards charity [OPTIONS] CHARITY_NUMBER
+
+      Query Charities Commision by registered charity number.
+
+    Options:
+      -k, --api-key TEXT
+      --help              Show this message and exit."""
+    PHOTOGRAPHERS_GALLERY_NAME = (
+        "THE PHOTOGRAPHERS' GALLERY LTD                    "
+        "                                                  "
+        "                                                  ")
+    PHOTOGRAPHERS_GALLERY_NUMBER = 262548
+
+    def test_charities_help(self, cli_runner):
+        """Test help output for companies subcommand."""
+        result = cli_runner.invoke(uk_boards, ['charity', '--help'])
+        assert result.exit_code == 0
+        assert inspect.cleandoc(self.CHARITIES_HELP) in result.output
+
+    @pytest.mark.remote_data
+    def test_charities_query(self, cli_runner):
+        result = cli_runner.invoke(uk_boards,
+                                   ['charity',
+                                    str(self.PHOTOGRAPHERS_GALLERY_NUMBER)])
+        assert result.exit_code == 0
+        assert (f"'CharityNumber': {self.PHOTOGRAPHERS_GALLERY_NUMBER}," in
+                result.output)
+        assert (f"'CharityName': \"{self.PHOTOGRAPHERS_GALLERY_NAME}\"," in
+                result.output)
