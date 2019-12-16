@@ -3,6 +3,8 @@
 
 """Test querying Charities Commision API."""
 
+from xml.etree import ElementTree
+
 import pytest
 
 from zeep.plugins import HistoryPlugin
@@ -39,7 +41,7 @@ TEST_PHOTOGRAPHERS_GALLERY_NAME = (
 
 TEST_EMAIL = 'an.email@test.org.uk'
 
-TEST_NUMBER = '02075555555'
+TEST_PHONE_NUMBER = '02075555555'
 
 TEST_SOAP_QUERY = f"""\
 <?xml version="1.0" encoding="utf-8"?>
@@ -69,7 +71,7 @@ TEST_SOAP_QUERY = f"""\
             {TEST_EMAIL}
           </PublicEmailAddress>
           <MainPhoneNumber>
-            {TEST_NUMBER}
+            {TEST_PHONE_NUMBER}
           </MainPhoneNumber>
         </CharityList>
       </GetCharitiesByNameResult>
@@ -84,25 +86,35 @@ class TestZeepCharityClient:
 
     def test_specify_config(self, requests_mock):
         """Basic test of generating correct Client configuration."""
-        requests_mock.get(TEST_WSDL_CODE,
-                          text=TEST_SOAP_QUERY)
+        requests_mock.get(TEST_WSDL_CODE, text=TEST_SOAP_ENV)
         test_client = get_client(TEST_WSDL_CODE)
         assert test_client.wsdl.location == TEST_WSDL_CODE
         assert test_client.settings.strict is False
         assert test_client.settings.xml_huge_tree is True
 
+    def test_mock_get_charity_by_name(self, requests_mock):
+        """Test mock query of GetCharitiesByName."""
+        pass
+
     @pytest.mark.remote_data
-    def test_adding_raw(self):
-        """Test raw_response and history plugin."""
+    def test_get_charity_by_name(self):
+        """Test raw_response and history of GetCharitiesByName query."""
         history = HistoryPlugin(maxlen=20)
         history_client = get_client(plugins=[history, CharitiesAuthPlugin()])
         with history_client.settings(raw_response=True):
             raw_response = history_client.service.GetCharitiesByName(
                 strSearch='TATE GALLERY FOUNDATION')
             assert raw_response.status_code == 200
-            # with open('tests/charity_soap.wsdl', 'rb') as test_output:
-            #     raw_test_output = test_output.read().strip(' ')
-            #     assert raw_response.content == raw_test_output
+            with open('tests/charity_soap.wsdl', 'rb') as test_output:
+                test_tree = ElementTree.fromstring(test_output.read())
+                resp_tree = ElementTree.fromstring(raw_response.content)
+                assert test_tree.tag == resp_tree.tag
+                for test in test_tree.iter():
+                    for resp in resp_tree.iter():
+                        if test.tag == resp.tag:
+                            break
+                    if resp.text:
+                        assert resp.text.strip() == test.text.strip()
         assert history.last_sent['envelope'][0][0].tag.endswith(
             'GetCharitiesByName')
         assert len(history._buffer) == 1

@@ -103,6 +103,8 @@ class TestBasicQueries:
         assert output is None
         assert [rec.message for rec in caplog.records] == correct_log_output
 
+    @pytest.mark.xfail(reason=("Fails unless ip address is registered for "
+                               "Companies House api key"))
     @pytest.mark.remote_data
     def test_basic_company_query(self, caplog):
         """Test an actual company house query, skipped by default.

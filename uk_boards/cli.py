@@ -43,9 +43,9 @@ def uk_boards(ctx: Dict[str, Union[str, int]],
             pass
             # path = input("No file provided for Companies House of "
             #              "Charities Commission API keys. Press enter to "
-            #              "create a default one called "
-            #              f"'{DEFAULT_API_KEY_PATH}' in this folder or "
-            #              "type your preferred filename (or CTL+C to quit): ")
+            #              f"create a default '{DEFAULT_API_KEY_PATH}' file "
+            #              "in this folder or type your preferred filename "
+            #              "(or CTL+C to quit): ")
     ctx.obj['indent'] = indent
     return 0
 

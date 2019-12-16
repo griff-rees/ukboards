@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <soap:Body>
+    <GetCharitiesByNameResponse xmlns="http://www.charitycommission.gov.uk/">
+      <GetCharitiesByNameResult>
+        <CharityList>
+          <RegisteredCharityNumber>
+            295549
+          </RegisteredCharityNumber>
+          <SubsidiaryNumber>
+            0
+          </SubsidiaryNumber>
+          <CharityName>
+            THE TATE GALLERY FOUNDATION
+          </CharityName>
+          <MainCharityName>
+            THE TATE GALLERY FOUNDATION
+          </MainCharityName>
+          <RegistrationStatus>
+            Removed
+          </RegistrationStatus>
+          <PublicEmailAddress />
+          <MainPhoneNumber />
+        </CharityList>
+      </GetCharitiesByNameResult>
+    </GetCharitiesByNameResponse>
+  </soap:Body>
+</soap:Envelope>
