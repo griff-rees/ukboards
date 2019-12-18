@@ -1,0 +1,1779 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://www.charitycommission.gov.uk/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://www.charitycommission.gov.uk/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://www.charitycommission.gov.uk/">
+      <s:element name="GetCharityByRegisteredCharityNumber">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityByRegisteredCharityNumberResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityByRegisteredCharityNumberResult" type="tns:Charity" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Charity">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CharityNumber" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="HasAccountsToDisplay" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegisteredCharityNumber" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="SubsidiaryNumber" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="RegistrationHistory" type="tns:RegistrationHistory" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="WorkingNames" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AreaOfBenefit" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GoverningDocument" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableObjects" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegisteredCompanyNumber" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ContactName" type="tns:Name" />
+          <s:element minOccurs="0" maxOccurs="1" name="Address" type="tns:Address" />
+          <s:element minOccurs="0" maxOccurs="1" name="PublicTelephoneNumber" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="PublicFaxNumber" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="EmailAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="WebsiteAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Activities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="AreaOfOperation" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Classification" type="tns:Classification" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Trustees" type="tns:Trustee" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Submission" type="tns:Submission" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="AccountListing" type="tns:AccountListing" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="CIOInsolvencyListing" type="tns:CIOInsolvencyListing" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="ExtendedRegistrationHistory" type="tns:ExtendedRegistrationHistory" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="CIOAmalgamation" type="tns:CIOAmalgamation" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="SummaryInformationReturnListing" type="tns:SummaryInformationReturnListing" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Subsidiary" type="tns:Subsidiary" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Returns" type="tns:AnnualReturns" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityMainGroupType" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LatestFiling" type="tns:LatestFiling" />
+          <s:element minOccurs="0" maxOccurs="1" name="OrganisationType" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InterimManager" type="tns:InterimManager" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="PublishedReport" type="tns:PublishedReport" />
+          <s:element minOccurs="0" maxOccurs="1" name="WasExempt" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="CIOIndicator" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CIODateConstituted" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CIODissolutionDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsCIODissolutionReceived" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsCIOAdminDissolution" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsSuspended" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsInsolvencyActDocsReceived" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsCIOOnAmalgamationNotice" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="LastRegistrationEvent" type="tns:ExtendedRegistrationHistory" />
+          <s:element minOccurs="0" maxOccurs="1" name="Insolvent" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="InAdministration" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="CIOConversionStatus" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="ClassInquiry" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="1" name="InSuspense" type="s:integer" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="RegistrationHistory">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="RegistrationDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegistrationRemovalDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RemovalReason" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Name">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CharityRoleName" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Address">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Line1" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Line2" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Line3" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Line4" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Line5" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Postcode" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Classification">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="What" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Who" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="How" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Trustee">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="TrusteeNumber" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="TrusteeName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RelatedCharitiesCount" type="s:integer" />
+          <s:element minOccurs="0" maxOccurs="unbounded" name="RelatedCharities" type="tns:RelatedCharity" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="RelatedCharity">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CharityNumber" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SubmissionsStatus" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Submission">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="MailingCycle" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FyStart" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FyEnd" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AnnualReturnReceivedDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountsReturnReceivedDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GrossIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalExpenditure" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="AccountListing">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="AccountPeriodYearEndDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Filename" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DisplayName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SizeInKB" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="HyperlinkReference" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Language" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IsColour" type="s:boolean" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="CIOInsolvencyListing">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Filename" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Title" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SizeInKB" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="HyperlinkReference" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Description" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InsolvencyActReference" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ExtendedRegistrationHistory">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventID" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="OrganisationNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="DateOfEvent" type="s:dateTime" />
+          <s:element minOccurs="0" maxOccurs="1" name="AssociatedOrganisationNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityGroupID" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="GroupSubsidarySuffix" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventReasonCode" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventTypeCode" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegisteredCharityNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="AssociatedRegisteredCharityNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="AssociatedCharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventClassCode" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventTypeNameEnglish" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityEventTypeNameWelsh" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="CIOAmalgamation">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CharityNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegisteredCharityNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitySubsidNumber" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DateOfEvent" type="s:dateTime" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="SummaryInformationReturnListing">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="MailingCycle" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Filename" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DisplayName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SizeInKB" type="s:long" />
+          <s:element minOccurs="0" maxOccurs="1" name="HyperlinkReference" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Subsidiary">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Number" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Name" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegistrationDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RemovalDate" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OrganisationType" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="AnnualReturns">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="RegisteredCharityNumber" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountType" type="tns:AccountType" />
+          <s:element minOccurs="0" maxOccurs="1" name="Resources" type="tns:Resources" />
+          <s:element minOccurs="0" maxOccurs="1" name="AssetsAndLiabilities" type="tns:AssetsAndLiabilities" />
+          <s:element minOccurs="0" maxOccurs="1" name="Employees" type="tns:Employees" />
+          <s:element minOccurs="0" maxOccurs="1" name="FyearEnd" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:simpleType name="AccountType">
+        <s:restriction base="s:string">
+          <s:enumeration value="ConsolidatedAccounts" />
+          <s:enumeration value="CharityOnlyAccounts" />
+          <s:enumeration value="Unspecified" />
+        </s:restriction>
+      </s:simpleType>
+      <s:complexType name="Resources">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Incoming" type="tns:IncomingResources" />
+          <s:element minOccurs="0" maxOccurs="1" name="Expended" type="tns:ExpendedResources" />
+          <s:element minOccurs="0" maxOccurs="1" name="Other" type="tns:OtherResources" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="IncomingResources">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="VoluntaryIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Legacies" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Endowments" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ActivitiesForGenerationFunds" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Investment" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableActivities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Other" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Total" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ExpendedResources">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="VoluntaryIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Fundraising" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentManagement" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableActivities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Grants" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Governance" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Other" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Total" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="OtherResources">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="RevaluationsOfFixedAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GainsLossesOnAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GainsLossesOnPensionSchemes" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SupportCosts" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Depreciation" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LevelOfReserves" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="AssetsAndLiabilities">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Assets" type="tns:Assets" />
+          <s:element minOccurs="0" maxOccurs="1" name="Funds" type="tns:Funds" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Assets">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="TotalFixedAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FixedAssetInvestments" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalCurrentAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CurrentAssetInvestments" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Cash" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CreditorsDueWithinOneYear" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LongTermCreditors" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="PensionFundAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalFixedAssetsAtStartOfYear" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FixedAssetInvestmentsAtStartOfYear" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalNetAssets" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Funds">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="EndowmentFunds" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RestrictedFunds" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="UnrestrictedFunds" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalFunds" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Employees">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="NoEmployees" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NoVolunteers" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="LatestFiling">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="AnnualReturnPeriod" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AnnualReturnReceived" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountsPeriod" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountsReceived" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="HasRecieveAnnualReturn" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="HasRecieveAccounts" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Message" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Inactive_Status" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountsPeriodForDue" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AccountsReceivedForDue" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="AnnualReturnReceivedForDue" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="HasRecieveAccountsForDue" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="HasRecieveAnnualReturnForDue" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="EarliestMissingAR" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="EarliestMissingAccounts" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LatestAccQualiifed" type="s:int" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="InterimManager">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="CurrentYN" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Message1" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Message2" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="PublishedReport">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="TypeOfReport" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="PDFAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="HTMAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ReportTypeCode" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumber">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="subsidiaryNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumberResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumberResult" type="tns:Charity" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharities">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="strSearch" type="tns:APISearchCriteria" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="APISearchCriteria">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="SearchFor" type="tns:SearchFor" />
+          <s:element minOccurs="1" maxOccurs="1" name="Keyword" type="tns:Keyword" />
+          <s:element minOccurs="0" maxOccurs="1" name="SearchKeyword" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="SearchIn" type="tns:SearchIn" />
+          <s:element minOccurs="0" maxOccurs="1" name="WhereOperates" type="tns:Areas" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateFrom_Day" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateFrom_Month" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateFrom_Year" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateFromIsSpecified" type="s:boolean" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateTo_Day" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateTo_Month" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateTo_Year" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RegistrationDateToIsSpecified" type="s:boolean" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateFrom_Day" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateFrom_Month" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateFrom_Year" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateFromIsSpecified" type="s:boolean" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateTo_Day" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateTo_Month" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateTo_Year" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="RemovedDateToIsSpecified" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeRangeFrom" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeRangeTo" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SearchKeywordRaw" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeRangeRaw" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:simpleType name="SearchFor">
+        <s:restriction base="s:string">
+          <s:enumeration value="OnlyRegisterCharities" />
+          <s:enumeration value="RegisterAndRemovedCharities" />
+          <s:enumeration value="OnlyRemovedCharities" />
+          <s:enumeration value="CharitiesInDefault" />
+        </s:restriction>
+      </s:simpleType>
+      <s:simpleType name="Keyword">
+        <s:restriction base="s:string">
+          <s:enumeration value="MatchAllWords" />
+          <s:enumeration value="MatchAnyWords" />
+        </s:restriction>
+      </s:simpleType>
+      <s:simpleType name="SearchIn">
+        <s:restriction base="s:string">
+          <s:enumeration value="All" />
+          <s:enumeration value="CharityName" />
+          <s:enumeration value="CharityObjects" />
+          <s:enumeration value="CharityActivities" />
+          <s:enumeration value="CharityNameAndObjects" />
+          <s:enumeration value="CharityNameAndActivities" />
+          <s:enumeration value="CharityObjectsAndActivities" />
+          <s:enumeration value="None" />
+        </s:restriction>
+      </s:simpleType>
+      <s:complexType name="Areas">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Specific" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="EnglandAndWales" type="tns:EnglandAndWales" />
+        </s:sequence>
+      </s:complexType>
+      <s:simpleType name="EnglandAndWales">
+        <s:restriction base="s:string">
+          <s:enumeration value="All" />
+          <s:enumeration value="ThroughoutEnglandAndWales" />
+          <s:enumeration value="ThroughoutEngland" />
+          <s:enumeration value="ThroughoutWales" />
+          <s:enumeration value="OutsideEnglandAndWales" />
+          <s:enumeration value="OnlySpecific" />
+          <s:enumeration value="ThroughoutLondon" />
+        </s:restriction>
+      </s:simpleType>
+      <s:element name="GetCharitiesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharitiesResult" type="tns:ArrayOfCharityList" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfCharityList">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="CharityList" nillable="true" type="tns:CharityList" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="CharityList">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="RegisteredCharityNumber" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="SubsidiaryNumber" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="MainCharityName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RegistrationStatus" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="PublicEmailAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="MainPhoneNumber" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharitiesByKeyword">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="strSearch" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharitiesByKeywordResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharitiesByKeywordResult" type="tns:ArrayOfCharityList" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharitiesByName">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="strSearch" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharitiesByNameResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharitiesByNameResult" type="tns:ArrayOfCharityList" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityAccountListing">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityAccountListingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityAccountListingResult" type="tns:ArrayOfAccountListing" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfAccountListing">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="AccountListing" nillable="true" type="tns:AccountListing" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityAnnualReturns">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityAnnualReturnsResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityAnnualReturnsResult" type="tns:ArrayOfAnnualReturns" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfAnnualReturns">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="AnnualReturns" nillable="true" type="tns:AnnualReturns" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityChartAssetsLiabilitiesAndPeople">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartAssetsLiabilitiesAndPeopleResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartAssetsLiabilitiesAndPeopleResult" type="tns:ChartAssetsLiabilitiesAndPeople" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ChartAssetsLiabilitiesAndPeople">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="NumberSuffix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ForceDecimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FormatNumberScale" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Employees" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="EmployeesLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Volunteers" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="VolunteersLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="alternateRowBgColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OwnUseAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OwnUseAssetsAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OwnUseAssetsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OwnUseAssetsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LongTermInvestments" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LongTermInvestmentsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LongTermInvestmentsAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LongTermInvestmentsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherAssetsAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherAssetsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherAssetsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalLiabilities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalLiabilitiesAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalLiabilitiesColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalLiabilitiesLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowBorder" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Decimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberPrefix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BaseFontSize" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowXAxisValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CanvasBgAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowYAxisValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ZeroPlaneAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OverlapColumns" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowShadow" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowCanvasBase" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DivLineAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerThickness" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerAlpha" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityChartCharitableSpending">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="includeInvestmentGains" type="s:boolean" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartCharitableSpendingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartCharitableSpendingResult" type="tns:ChartCharitableSpending" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ChartCharitableSpending">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="ForceDecimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FormatNumberScale" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GainLossInvestment" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomePlusGainsGreaterThanExpended" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ChartType" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OverlapColumns" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SPName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SPType" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SPColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SPToObject" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="alternateRowBgColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberPrefix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowLabels" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowLegend" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeGenerationGovernance" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeGenerationGovernanceLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeGenerationGovernancePercentage" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeGenerationGovernanceSeriesAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeGenerationGovernanceColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableSpending" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableSpendingLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableSpendingPercentage" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableSpendingColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CharitableSpendingAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Retained" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RetainedLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RetainedPercentage" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RetainedAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="RetainedColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowBorder" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Decimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberSuffix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BaseFontSize" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowXAxisValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowYAxisValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CanvasBgAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowShadow" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowCanvasBase" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DivLineAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerThickness" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalSpending" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityChartComplianceHistory">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartComplianceHistoryResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartComplianceHistoryResult" type="tns:ChartFinancialCompliance" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ChartFinancialCompliance">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="ExpendColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="IncomeColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LegendBgAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LegendBorderAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="LegendShadow" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OverlapColumns" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberPrefix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowBorder" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TrendLine" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Decimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BaseFontSize" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CanvasBgAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowShadow" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowCanvasBase" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DivLineAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1FYE" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1Year" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1Expend" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="Year1ConsolidatedAccounts" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1CompAccMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2CompAccMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3CompAccMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4CompAccMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5CompAccMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year1CompARMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2CompARMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3CompARMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4CompARMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5CompARMonths" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2Year" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2FYE" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year2Expend" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="Year2ConsolidatedAccounts" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3FYE" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3Year" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year3Expend" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="Year3ConsolidatedAccounts" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4FYE" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4Year" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year4Expend" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="Year4ConsolidatedAccounts" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5FYE" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5Year" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Year5Expend" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="Year5ConsolidatedAccounts" type="s:boolean" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityChartFinancialHistory">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartFinancialHistoryResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartFinancialHistoryResult" type="tns:ChartFinancialCompliance" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartIncome">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartIncomeResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartIncomeResult" type="tns:ChartIncomeSpending" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ChartIncomeSpending">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="ActivitiesFundGen" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ActivitiesFundGenLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ActivitiesColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ActivitiesIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentIncomeLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentIncColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentIncIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ResourcesCharActs" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ResourcesCharActsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ResourcesCharActsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ResourcesCharActsIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherIncoming" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherIncomingLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherIncomingColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherIncomingIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalIncoming" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalIncomingLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalIncomeColour" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="VolIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="VolIncomeLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="VolIncomeIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsGenVolIncome" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsGenVolIncomeLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsGenVolIncomeColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsGenVolIncomeIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FundraisingTradingCosts" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FundraisingTradingCostsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FundraisingTradingCostsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FundraisingTradingCostsIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentManCosts" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentManCostsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentManCostsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentManCostsIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsCharActs" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsCharActsLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsCharActsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CostsCharActsIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Governance" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GovernanceLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GovernanceColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GovernanceIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherResExpend" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherResExpendLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherResExpendIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="OtherResExpendColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalResExpend" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalExpLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalExpColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalExpIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberSuffix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ForceDecimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentGainLoss" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentGainLossLabel" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="IsInvestmentGain" type="s:boolean" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberScaleValue" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberScaleUnit" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Caption" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Legacies" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Endowments" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvAssetsColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Revaluations" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="InvestmentAssets" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="PensionGainsLosses" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="GrantsToInstitutions" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SupportCosts" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Depreciation" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Reserves" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="XAxisName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="YAxisName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FormatNumberScale" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowBorder" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowPercentageValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Decimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberPrefix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SmartLineColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SkipOverlapLabels" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="StartingAngle" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BaseFontSize" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShadowAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SlicingDistance" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowXAxisValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BGColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowLabels" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="VolIncomeColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="alternateRowBgColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerThickness" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerAlpha" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityChartSpending">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartSpendingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartSpendingResult" type="tns:ChartIncomeSpending" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartIncomeAndSpending">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityChartIncomeAndSpendingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityChartIncomeAndSpendingResult" type="tns:ChartIncomeSpending" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityNumbersChart">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityNumbersChartResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityNumbersChartResult" type="tns:ChartNumberCharities" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ChartNumberCharities">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="TotalCharities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalCharitiesLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TotalCharitiesColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberMainCharities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="MainCharitiesLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="NumberConstituentCharities" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ConstituentCharitiesLabel" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BaseFontSize" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="BGColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="MainCharitiesIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="formatNumberScale" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="MainCharitiesColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ConstituentCharitiesColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ConstituentCharitiesIsSliced" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="numberScaleValue" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="numberScaleUnit" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="alternateRowBGColor" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowValues" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="numberPrefix" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowBorder" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShadowAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ShowLabels" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="SlicingDistance" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="decimals" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="divLineAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerAlpha" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="valueColumnPadding" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ListRowDividerThickness" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityFinancialComplianceTableData">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityFinancialComplianceTableDataResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityFinancialComplianceTableDataResult" type="tns:ArrayOfFinancialComplianceTableData" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfFinancialComplianceTableData">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="FinancialComplianceTableData" nillable="true" type="tns:FinancialComplianceTableData" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="FinancialComplianceTableData">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="FYearEnd" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="AccountsQualified" type="s:short" />
+          <s:element minOccurs="0" maxOccurs="1" name="Income" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Expend" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ACReceived" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ARReceived" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="ViewAC" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="ConsolidatedAccounts" type="s:short" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityLatestFiling">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityLatestFilingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityLatestFilingResult" type="tns:LatestFiling" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityAreasOfOperation">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="subsidiaryNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityAreasOfOperationResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityAreasOfOperationResult" type="tns:ArrayOfString" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfString">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="string" nillable="true" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityPublishedReport">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityPublishedReportResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityPublishedReportResult" type="tns:ArrayOfPublishedReport" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfPublishedReport">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="PublishedReport" nillable="true" type="tns:PublishedReport" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityRegistrations">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="subsidiaryNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityRegistrationsResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityRegistrationsResult" type="tns:ArrayOfRegistrationHistory" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfRegistrationHistory">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="RegistrationHistory" nillable="true" type="tns:RegistrationHistory" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharitySubmissions">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharitySubmissionsResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharitySubmissionsResult" type="tns:ArrayOfSubmission" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfSubmission">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Submission" nillable="true" type="tns:Submission" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharitySubsidiaries">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharitySubsidiariesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharitySubsidiariesResult" type="tns:ArrayOfSubsidiary" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfSubsidiary">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Subsidiary" nillable="true" type="tns:Subsidiary" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetCharityTrustees">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="registeredCharityNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="subsidiaryNumber" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetCharityTrusteesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetCharityTrusteesResult" type="tns:ArrayOfTrustee" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfTrustee">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Trustee" nillable="true" type="tns:Trustee" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetTrusteeAndRelatedCharities">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="APIKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="trusteeNumber" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="CharityNumberToExclude" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetTrusteeAndRelatedCharitiesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetTrusteeAndRelatedCharitiesResult" type="tns:Trustee" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="GetCharityByRegisteredCharityNumberSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityByRegisteredCharityNumber" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityByRegisteredCharityNumberSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityByRegisteredCharityNumberResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumberSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityByRegisteredCharityNumberAndSubsidiaryNumber" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumberSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityByRegisteredCharityNumberAndSubsidiaryNumberResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharities" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharitiesResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesByKeywordSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharitiesByKeyword" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesByKeywordSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharitiesByKeywordResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesByNameSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharitiesByName" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitiesByNameSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharitiesByNameResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAccountListingSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityAccountListing" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAccountListingSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityAccountListingResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAnnualReturnsSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityAnnualReturns" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAnnualReturnsSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityAnnualReturnsResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartAssetsLiabilitiesAndPeopleSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartAssetsLiabilitiesAndPeople" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartAssetsLiabilitiesAndPeopleSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartAssetsLiabilitiesAndPeopleResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartCharitableSpendingSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartCharitableSpending" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartCharitableSpendingSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartCharitableSpendingResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartComplianceHistorySoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartComplianceHistory" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartComplianceHistorySoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartComplianceHistoryResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartFinancialHistorySoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartFinancialHistory" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartFinancialHistorySoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartFinancialHistoryResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartIncomeSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartIncome" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartIncomeSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartIncomeResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartSpendingSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartSpending" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartSpendingSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartSpendingResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartIncomeAndSpendingSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityChartIncomeAndSpending" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityChartIncomeAndSpendingSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityChartIncomeAndSpendingResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityNumbersChartSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityNumbersChart" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityNumbersChartSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityNumbersChartResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityFinancialComplianceTableDataSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityFinancialComplianceTableData" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityFinancialComplianceTableDataSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityFinancialComplianceTableDataResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityLatestFilingSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityLatestFiling" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityLatestFilingSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityLatestFilingResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAreasOfOperationSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityAreasOfOperation" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityAreasOfOperationSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityAreasOfOperationResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityPublishedReportSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityPublishedReport" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityPublishedReportSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityPublishedReportResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityRegistrationsSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityRegistrations" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityRegistrationsSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityRegistrationsResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitySubmissionsSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharitySubmissions" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitySubmissionsSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharitySubmissionsResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitySubsidiariesSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharitySubsidiaries" />
+  </wsdl:message>
+  <wsdl:message name="GetCharitySubsidiariesSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharitySubsidiariesResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityTrusteesSoapIn">
+    <wsdl:part name="parameters" element="tns:GetCharityTrustees" />
+  </wsdl:message>
+  <wsdl:message name="GetCharityTrusteesSoapOut">
+    <wsdl:part name="parameters" element="tns:GetCharityTrusteesResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetTrusteeAndRelatedCharitiesSoapIn">
+    <wsdl:part name="parameters" element="tns:GetTrusteeAndRelatedCharities" />
+  </wsdl:message>
+  <wsdl:message name="GetTrusteeAndRelatedCharitiesSoapOut">
+    <wsdl:part name="parameters" element="tns:GetTrusteeAndRelatedCharitiesResponse" />
+  </wsdl:message>
+  <wsdl:portType name="SearchCharitiesV1Soap">
+    <wsdl:operation name="GetCharityByRegisteredCharityNumber">
+      <wsdl:input message="tns:GetCharityByRegisteredCharityNumberSoapIn" />
+      <wsdl:output message="tns:GetCharityByRegisteredCharityNumberSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumber">
+      <wsdl:input message="tns:GetCharityByRegisteredCharityNumberAndSubsidiaryNumberSoapIn" />
+      <wsdl:output message="tns:GetCharityByRegisteredCharityNumberAndSubsidiaryNumberSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharities">
+      <wsdl:input message="tns:GetCharitiesSoapIn" />
+      <wsdl:output message="tns:GetCharitiesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByKeyword">
+      <wsdl:input message="tns:GetCharitiesByKeywordSoapIn" />
+      <wsdl:output message="tns:GetCharitiesByKeywordSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByName">
+      <wsdl:input message="tns:GetCharitiesByNameSoapIn" />
+      <wsdl:output message="tns:GetCharitiesByNameSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAccountListing">
+      <wsdl:input message="tns:GetCharityAccountListingSoapIn" />
+      <wsdl:output message="tns:GetCharityAccountListingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAnnualReturns">
+      <wsdl:input message="tns:GetCharityAnnualReturnsSoapIn" />
+      <wsdl:output message="tns:GetCharityAnnualReturnsSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartAssetsLiabilitiesAndPeople">
+      <wsdl:input message="tns:GetCharityChartAssetsLiabilitiesAndPeopleSoapIn" />
+      <wsdl:output message="tns:GetCharityChartAssetsLiabilitiesAndPeopleSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartCharitableSpending">
+      <wsdl:input message="tns:GetCharityChartCharitableSpendingSoapIn" />
+      <wsdl:output message="tns:GetCharityChartCharitableSpendingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartComplianceHistory">
+      <wsdl:input message="tns:GetCharityChartComplianceHistorySoapIn" />
+      <wsdl:output message="tns:GetCharityChartComplianceHistorySoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartFinancialHistory">
+      <wsdl:input message="tns:GetCharityChartFinancialHistorySoapIn" />
+      <wsdl:output message="tns:GetCharityChartFinancialHistorySoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncome">
+      <wsdl:input message="tns:GetCharityChartIncomeSoapIn" />
+      <wsdl:output message="tns:GetCharityChartIncomeSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartSpending">
+      <wsdl:input message="tns:GetCharityChartSpendingSoapIn" />
+      <wsdl:output message="tns:GetCharityChartSpendingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncomeAndSpending">
+      <wsdl:input message="tns:GetCharityChartIncomeAndSpendingSoapIn" />
+      <wsdl:output message="tns:GetCharityChartIncomeAndSpendingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityNumbersChart">
+      <wsdl:input message="tns:GetCharityNumbersChartSoapIn" />
+      <wsdl:output message="tns:GetCharityNumbersChartSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityFinancialComplianceTableData">
+      <wsdl:input message="tns:GetCharityFinancialComplianceTableDataSoapIn" />
+      <wsdl:output message="tns:GetCharityFinancialComplianceTableDataSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityLatestFiling">
+      <wsdl:input message="tns:GetCharityLatestFilingSoapIn" />
+      <wsdl:output message="tns:GetCharityLatestFilingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAreasOfOperation">
+      <wsdl:input message="tns:GetCharityAreasOfOperationSoapIn" />
+      <wsdl:output message="tns:GetCharityAreasOfOperationSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityPublishedReport">
+      <wsdl:input message="tns:GetCharityPublishedReportSoapIn" />
+      <wsdl:output message="tns:GetCharityPublishedReportSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityRegistrations">
+      <wsdl:input message="tns:GetCharityRegistrationsSoapIn" />
+      <wsdl:output message="tns:GetCharityRegistrationsSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubmissions">
+      <wsdl:input message="tns:GetCharitySubmissionsSoapIn" />
+      <wsdl:output message="tns:GetCharitySubmissionsSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubsidiaries">
+      <wsdl:input message="tns:GetCharitySubsidiariesSoapIn" />
+      <wsdl:output message="tns:GetCharitySubsidiariesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityTrustees">
+      <wsdl:input message="tns:GetCharityTrusteesSoapIn" />
+      <wsdl:output message="tns:GetCharityTrusteesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetTrusteeAndRelatedCharities">
+      <wsdl:input message="tns:GetTrusteeAndRelatedCharitiesSoapIn" />
+      <wsdl:output message="tns:GetTrusteeAndRelatedCharitiesSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="SearchCharitiesV1Soap" type="tns:SearchCharitiesV1Soap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetCharityByRegisteredCharityNumber">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityByRegisteredCharityNumber" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumber">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityByRegisteredCharityNumberAndSubsidiaryNumber" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharities">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharities" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByKeyword">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharitiesByKeyword" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByName">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharitiesByName" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAccountListing">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAccountListing" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAnnualReturns">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAnnualReturns" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartAssetsLiabilitiesAndPeople">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartAssetsLiabilitiesAndPeople" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartCharitableSpending">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartCharitableSpending" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartComplianceHistory">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartComplianceHistory" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartFinancialHistory">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartFinancialHistory" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncome">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartIncome" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartSpending">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartSpending" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncomeAndSpending">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartIncomeAndSpending" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityNumbersChart">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityNumbersChart" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityFinancialComplianceTableData">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityFinancialComplianceTableData" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityLatestFiling">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityLatestFiling" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAreasOfOperation">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAreasOfOperation" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityPublishedReport">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityPublishedReport" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityRegistrations">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityRegistrations" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubmissions">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharitySubmissions" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubsidiaries">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharitySubsidiaries" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityTrustees">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetCharityTrustees" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetTrusteeAndRelatedCharities">
+      <soap:operation soapAction="http://www.charitycommission.gov.uk/GetTrusteeAndRelatedCharities" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="SearchCharitiesV1Soap12" type="tns:SearchCharitiesV1Soap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetCharityByRegisteredCharityNumber">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityByRegisteredCharityNumber" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityByRegisteredCharityNumberAndSubsidiaryNumber">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityByRegisteredCharityNumberAndSubsidiaryNumber" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharities">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharities" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByKeyword">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharitiesByKeyword" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitiesByName">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharitiesByName" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAccountListing">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAccountListing" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAnnualReturns">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAnnualReturns" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartAssetsLiabilitiesAndPeople">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartAssetsLiabilitiesAndPeople" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartCharitableSpending">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartCharitableSpending" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartComplianceHistory">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartComplianceHistory" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartFinancialHistory">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartFinancialHistory" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncome">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartIncome" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartSpending">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartSpending" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityChartIncomeAndSpending">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityChartIncomeAndSpending" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityNumbersChart">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityNumbersChart" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityFinancialComplianceTableData">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityFinancialComplianceTableData" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityLatestFiling">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityLatestFiling" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityAreasOfOperation">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityAreasOfOperation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityPublishedReport">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityPublishedReport" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityRegistrations">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityRegistrations" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubmissions">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharitySubmissions" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharitySubsidiaries">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharitySubsidiaries" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetCharityTrustees">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetCharityTrustees" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetTrusteeAndRelatedCharities">
+      <soap12:operation soapAction="http://www.charitycommission.gov.uk/GetTrusteeAndRelatedCharities" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="SearchCharitiesV1">
+    <wsdl:port name="SearchCharitiesV1Soap" binding="tns:SearchCharitiesV1Soap">
+      <soap:address location="https://apps.charitycommission.gov.uk/Showcharity/API/SearchCharitiesV1/SearchCharitiesV1.asmx" />
+    </wsdl:port>
+    <wsdl:port name="SearchCharitiesV1Soap12" binding="tns:SearchCharitiesV1Soap12">
+      <soap12:address location="https://apps.charitycommission.gov.uk/Showcharity/API/SearchCharitiesV1/SearchCharitiesV1.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
