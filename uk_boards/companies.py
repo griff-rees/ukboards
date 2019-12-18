@@ -124,8 +124,11 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
     return company_number
 
 
-def get_company_network(company_number: int = '04547069',
-                        branches: int = 0,) -> Optional[networkx.Graph]:
+def get_company_network(company_number: Union(str, int) = '04547069',
+                        branches: int = 0,
+                        exclude_resigned_board_members: bool = False,
+                        exclude_non_active_companies: bool = False
+                        ) -> Optional[networkx.Graph]:
     """
     Query the network of board members recursively.
 
@@ -137,18 +140,22 @@ def get_company_network(company_number: int = '04547069',
         * Add option of including network collected prior to error
     """
     g = networkx.Graph()
-    logger.debug('Querying board network from {}'.format(company_number))
+    logger.debug(f'Querying board network from {company_number}')
     company_number = stringify_company_number(company_number)
     company = companies_house_query('/company/' + company_number)
     if not company:
-        logger.error('Querying data on company {} failed'.format(
-            company_number))
+        logger.error(f'Querying data on company {company_number} failed')
         return None
+    if exclude_non_active_companies:
+        if company['company_status'] != 'active':
+            logger.warning(f'Excluding company {company_number} because '
+                           f'status is {company["company_status"]}. '
+                           f'Company name: {company["company_name"]}')
+            return
     logger.debug(company['company_name'])
     g.add_node(company_number, name=company['company_name'],
                bipartite=0, data=company)
-    officers = companies_house_query(
-        '/company/{}/officers'.format(company_number))
+    officers = companies_house_query(f'/company/{company_number}/officers')
     if not officers:
         logger.error("Error requesting officers of company {0} "
                      "({1})".format(company['company_name'], company_number))

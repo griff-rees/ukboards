@@ -3,10 +3,14 @@
 
 """Tests for `Companies House` quries, companies and board networks."""
 
+from networkx import is_connected
+from networkx.algorithms import bipartite
+
 import pytest
 
 from uk_boards.companies import (stringify_company_number,
                                  companies_house_query,
+                                 get_company_network,
                                  CompaniesHousePermissionError,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_URL)
@@ -122,3 +126,20 @@ class TestBasicQueries:
         for key, value in PUNCHDRUNK_DICT_SUBSET.items():
             assert output[key] == value
         assert caplog.records == []
+
+
+class TestCompanyNetwork:
+
+    """Test Constructing a Network."""
+
+    @pytest.mark.xfail(reason=("Fails unless ip address is registered for "
+                               "Companies House api key"))
+    @pytest.mark.remote_data
+    def test_basic_board(self, caplog):
+        """Test a simple query of """
+        company_network = get_company_network('04547069')
+        assert len(company_network) == 15
+        assert is_connected(company_network)
+        tate_foundation, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 14
+        assert False
