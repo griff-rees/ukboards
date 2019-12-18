@@ -16,6 +16,7 @@ from uk_boards.utils import (CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
 
 PUNCHDRUNK_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
 PUNCHDRUNK_JSON_SUBSET = '{"status": "active", "company_name": "PUNCHDRUNK"}'
+PUNCHDRUNK_DICT_SUBSET = {"status": "active", "company_name": "PUNCHDRUNK"}
 
 
 class TestCorrectCompanyNumber:
@@ -118,6 +119,6 @@ class TestBasicQueries:
         """
         output = companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID,
                                        max_trials=1, sleep_time=10)
-        for key, value in PUNCHDRUNK_JSON_SUBSET.items():
+        for key, value in PUNCHDRUNK_DICT_SUBSET.items():
             assert output[key] == value
         assert caplog.records == []
