@@ -79,8 +79,8 @@ def check_registered_charity_number(name: str,
             registeredCharityNumber=charity['RegisteredCharityNumber'],)
         if charity_data['CharityNumber'] == charity_number:
             return charity_data['RegisteredCharityNumber']
-    raise Exception('No charity found with "CharityNumber": ' +
-                    str(charity_number))
+    raise Exception('No charity found with "CharityNumber": '
+                    f'{charity_number}')
 
 
 def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
@@ -90,16 +90,15 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                         test_name: str = None) -> Optional[networkx.Graph]:
     g = networkx.Graph()
     if not client:
-        client = get_client()
+        client = get_client(api_key_value=api_key)
     try:
         charity_data = client.service.GetCharityByRegisteredCharityNumber(
-            APIKey=api_key,
             registeredCharityNumber=charity_number,)
     except Fault:
         logger.error(f'Fault error pulling for {charity_number}')
         return
     if not charity_data:
-        logger.warning("No data on charity {}".format(charity_number))
+        logger.warning(f"No data on charity {charity_number}")
         if not test_name:
             logger.warning("No records from Charities Commision on "
                            "this Arts Council Instition")
@@ -121,7 +120,6 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
     logger.debug(charity_name)
     for subsidiary in range(charity_data['SubsidiaryNumber'] + 1):
         trustees = client.service.GetCharityTrustees(
-            APIKey=api_key,
             registeredCharityNumber=charity_number,
             subsidiaryNumber=subsidiary)
         if not trustees:
