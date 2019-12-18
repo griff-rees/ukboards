@@ -23,6 +23,10 @@ PUNCHDRUNK_JSON_SUBSET = '{"status": "active", "company_name": "PUNCHDRUNK"}'
 PUNCHDRUNK_DICT_SUBSET = {"status": "active", "company_name": "PUNCHDRUNK"}
 
 
+EXPECTED_FAIL_IP_REASON = ("Fails unless ip address is registered for "
+                           "Companies House api key")
+
+
 class TestCorrectCompanyNumber:
 
     """Test correcting company numbers passed as int or str return str."""
@@ -108,8 +112,7 @@ class TestBasicQueries:
         assert output is None
         assert [rec.message for rec in caplog.records] == correct_log_output
 
-    @pytest.mark.xfail(reason=("Fails unless ip address is registered for "
-                               "Companies House api key"))
+    @pytest.mark.xfail(reason=EXPECTED_FAIL_IP_REASON)
     @pytest.mark.remote_data
     def test_basic_company_query(self, caplog):
         """Test an actual company house query, skipped by default.
@@ -132,14 +135,19 @@ class TestCompanyNetwork:
 
     """Test Constructing a Network."""
 
-    @pytest.mark.xfail(reason=("Fails unless ip address is registered for "
-                               "Companies House api key"))
+    @pytest.mark.xfail(reason=EXPECTED_FAIL_IP_REASON)
     @pytest.mark.remote_data
     def test_basic_board(self, caplog):
-        """Test a simple query of """
+        """Test a simple query of PUNCHDRUNK and all board members"""
         company_network = get_company_network('04547069')
-        assert len(company_network) == 15
+        assert len(company_network) == 34
         assert is_connected(company_network)
-        tate_foundation, board_members = bipartite.sets(company_network)
-        assert len(board_members) == 14
-        assert False
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 33
+        rebecca_dawson = company_network.nodes['kk4hteZw_nx0lRsy5-qJAra1OlU']
+        assert rebecca_dawson['data']['appointed_on'] == '2016-09-06'
+        assert 'resigned_on' not in rebecca_dawson['data']
+        sandeep_dwesar = company_network.nodes['3ZgWYymGd0aqI1FZ_rpyNaiI2vM']
+        assert sandeep_dwesar['data']['appointed_on'] == '2010-07-19'
+        assert sandeep_dwesar['data']['resigned_on'] == '2018-10-08'
+        assert company_network.nodes['04547069']['name'] == 'PUNCHDRUNK'

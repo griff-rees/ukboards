@@ -124,7 +124,7 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
     return company_number
 
 
-def get_company_network(company_number: Union(str, int) = '04547069',
+def get_company_network(company_number: Union[str, int] = '04547069',
                         branches: int = 0,
                         exclude_resigned_board_members: bool = False,
                         exclude_non_active_companies: bool = False
@@ -151,30 +151,29 @@ def get_company_network(company_number: Union(str, int) = '04547069',
             logger.warning(f'Excluding company {company_number} because '
                            f'status is {company["company_status"]}. '
                            f'Company name: {company["company_name"]}')
-            return
+            return None
     logger.debug(company['company_name'])
     g.add_node(company_number, name=company['company_name'],
                bipartite=0, data=company)
     officers = companies_house_query(f'/company/{company_number}/officers')
     if not officers:
-        logger.error("Error requesting officers of company {0} "
-                     "({1})".format(company['company_name'], company_number))
+        logger.error("Error requesting officers of company "
+                     f"{company['company_name']} ({company_number})")
         # Worth considering saving error here
         return None
     for officer in officers['items']:
         officer_id = officer['links']['officer']['appointments'].split('/')[2]
-        logger.debug('{0} {1} {2}'.format(company_number, officer['name'],
-                                          officer_id))
+        logger.debug(f'{company_number} {officer["name"]} {officer_id}')
         g.add_node(officer_id, name=officer['name'], bipartite=1, data=officer)
         g.add_edge(company_number, officer_id)
         if branches:
             appointments = companies_house_query(
-                '/officers/{}/appointments'.format(officer_id))
+                    f'/officers/{officer_id}/appointments')
             if not appointments:
                 logger.error("Error requesting appointments of board "
-                             "member {0} ({1}) of company {2} ({3})".format(
-                                 officer['name'], officer_id,
-                                 company['company_name'], company_number))
+                             f"member {officer['name']} ({officer_id}) of "
+                             f"company {company['company_name']} "
+                             f"({company_number})")
                 # Worth considering saving error here
                 continue
             for related_company in appointments['items']:
@@ -190,12 +189,11 @@ def get_company_network(company_number: Union(str, int) = '04547069',
                         g = networkx.compose(g, subgraph)
                         assert networkx.is_bipartite(subgraph)
                     else:
-                        logger.warning("Skipping company {0} from board "
-                                       "member {1} ({2}) of company {3} "
-                                       "({4})".format(related_company_number,
-                                                      officer['name'],
-                                                      officer_id,
-                                                      company['company_name'],
-                                                      company_number))
+                        logger.warning("Skipping company "
+                                       f"{related_company_number} "
+                                       f"from board member {officer['name']} "
+                                       f"({officer_id}) of company "
+                                       f"{company['company_name']} "
+                                       f"({company_number})")
                         print(related_company)
     return g
