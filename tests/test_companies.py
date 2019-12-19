@@ -18,13 +18,26 @@ from uk_boards.utils import (CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                              DEFAULT_API_KEY_PATH)
 
 
+PUNCHDRUNK_COMPANY_NAME = "PUNCHDRUNK"
 PUNCHDRUNK_COMPANY_ID = '04547069'  # PUNCHDRUNK company number
-PUNCHDRUNK_JSON_SUBSET = '{"status": "active", "company_name": "PUNCHDRUNK"}'
-PUNCHDRUNK_DICT_SUBSET = {"status": "active", "company_name": "PUNCHDRUNK"}
+PUNCHDRUNK_JSON_SUBSET = ('{{"status": "active", '
+                          f'"company_name": "{PUNCHDRUNK_COMPANY_NAME}"}}')
+PUNCHDRUNK_DICT_SUBSET = {"status": "active",
+                          "company_name": PUNCHDRUNK_COMPANY_NAME}
 
 
 EXPECTED_FAIL_IP_REASON = ("Fails unless ip address is registered for "
                            "Companies House api key")
+
+
+def company_url(company_number: str) -> str:
+    return (COMPANIES_HOUSE_URL + '/company/' +
+            stringify_company_number(company_number))
+
+
+def company_officers_url(company_number: str) -> str:
+    return (COMPANIES_HOUSE_URL + '/company/' +
+            stringify_company_number(company_number) + '/officers')
 
 
 class TestCorrectCompanyNumber:
@@ -59,14 +72,9 @@ class TestBasicQueries:
           pytest by default once installed
     """
 
-    @staticmethod
-    def _company_url(company_number: str) -> str:
-        return (COMPANIES_HOUSE_URL + '/company/' +
-                stringify_company_number(company_number))
-
     def test_correct_company_query(self, requests_mock, caplog):
         """Test a correct default query (200 status)."""
-        requests_mock.get(self._company_url(PUNCHDRUNK_COMPANY_ID),
+        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
                           json=PUNCHDRUNK_JSON_SUBSET)
         output = companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID)
         assert output == PUNCHDRUNK_JSON_SUBSET
@@ -90,7 +98,7 @@ class TestBasicQueries:
                                  'Companies House API Key.')
         requests_mock.get(CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                           text=external_ip)
-        requests_mock.get(self._company_url(PUNCHDRUNK_COMPANY_ID),
+        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
                           status_code=403)
         with pytest.raises(CompaniesHousePermissionError) as exec_info:
             companies_house_query('/company/' + PUNCHDRUNK_COMPANY_ID)
@@ -105,8 +113,7 @@ class TestBasicQueries:
             'Skipping /company/00605459'
         ]
         test_company_number = '00605459'
-        requests_mock.get(self._company_url(test_company_number),
-                          status_code=404)
+        requests_mock.get(company_url(test_company_number), status_code=404)
         output = companies_house_query('/company/' + test_company_number,
                                        max_trials=1, sleep_time=1)
         assert output is None
@@ -135,19 +142,83 @@ class TestCompanyNetwork:
 
     """Test Constructing a Network."""
 
+    OFFICER_ID_1 = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
+    OFFICER_ID_2 = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
+
     @pytest.mark.xfail(reason=EXPECTED_FAIL_IP_REASON)
     @pytest.mark.remote_data
     def test_basic_board(self, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
-        company_network = get_company_network('04547069')
+        company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
         assert len(company_network) == 34
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
-        rebecca_dawson = company_network.nodes['kk4hteZw_nx0lRsy5-qJAra1OlU']
-        assert rebecca_dawson['data']['appointed_on'] == '2016-09-06'
-        assert 'resigned_on' not in rebecca_dawson['data']
-        sandeep_dwesar = company_network.nodes['3ZgWYymGd0aqI1FZ_rpyNaiI2vM']
-        assert sandeep_dwesar['data']['appointed_on'] == '2010-07-19'
-        assert sandeep_dwesar['data']['resigned_on'] == '2018-10-08'
-        assert company_network.nodes['04547069']['name'] == 'PUNCHDRUNK'
+        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        assert officer_1['data']['appointed_on'] == '2016-09-06'
+        assert 'resigned_on' not in officer_1['data']
+        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        assert officer_2['data']['appointed_on'] == '2010-07-19'
+        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+
+    def test_mock_basic_board(self, requests_mock, caplog):
+        """Test a simple query of PUNCHDRUNK and all board members"""
+        PUNCHDRUNK_JSON = {
+            'company_number': PUNCHDRUNK_COMPANY_ID,
+            'company_status': 'active',
+            'company_name': PUNCHDRUNK_COMPANY_NAME,
+        }
+        OFFICERS_JSON = {
+                'active_count': 10,
+                'inactive_count': 0,
+                'items': [{
+                    'name': 'LAST NAME, A First Name',
+                    'address': {'address_line_1': 'A Road',
+                                'postal_code': 'N11 1NN',
+                                'premises': 'A Fancy Building'},
+                    'appointed_on': '2016-09-06',
+                    'officer_role': 'director',
+                    'country_of_residence': 'England',
+                    'date_of_birth': {'month': 4, 'year': 1978},
+                    'links': {
+                        'officer': {
+                            'appointments': f'/officers/{self.OFFICER_ID_1}'}
+                        }
+                    }, {
+                    'name': 'ANOTHER LAST NAME, Another First Name',
+                    'address': {'address_line_1': 'A Road',
+                                'postal_code': 'M11 1MM',
+                                'premises': 'A Flashy Building'},
+                    'appointed_on': '2010-07-19',
+                    'resigned_on': '2018-10-08',
+                    'occupation': 'Senior Civil Servant',
+                    'links': {
+                        'officer': {
+                            'appointments': f'/officers/{self.OFFICER_ID_2}'}
+                        }
+                    }
+                ],
+                'items_per_page': 35,
+                'kind': 'officer-list',
+                'resigned_count': 1,
+                'total_results': 2}
+        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
+                          json=PUNCHDRUNK_JSON)
+        requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
+                          json=OFFICERS_JSON)
+        company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
+        assert len(company_network) == 3
+        assert is_connected(company_network)
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 2
+        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        assert officer_1['data']['appointed_on'] == '2016-09-06'
+        assert 'resigned_on' not in officer_1['data']
+        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        assert officer_2['data']['appointed_on'] == '2010-07-19'
+        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+        assert len(company_network) == 3
