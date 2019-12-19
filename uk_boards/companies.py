@@ -14,17 +14,17 @@ import networkx
 import requests
 from requests.exceptions import ConnectionError
 
-from .utils import InternetConnectionError, get_external_ip_address
+from .utils import (InternetConnectionError, get_external_ip_address,
+                    DEFAULT_API_KEY_PATH)
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
 
 
 COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
 COMPANIES_HOUSE_API_KEY_NAME = "COMPANIES_HOUSE_KEY"
 COMPANIES_HOUSE_API_KEY = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
-
 
 JSONDict = Dict[str, Any]
 

@@ -14,17 +14,18 @@ from typing import List, Optional
 from zeep import Client, Settings, Plugin
 from zeep.exceptions import Fault
 
+from .utils import DEFAULT_API_KEY_PATH
+
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
 
 CHARITY_COMMISSION_WSDL = ('https://apps.charitycommission.gov.uk/'
                            'Showcharity/API/SearchCharitiesV1/'
                            'SearchCharitiesV1.asmx?wsdl')
 
-CHARITY_COMMISSION_API_KEY = os.environ.get("CHARITY_KEY")
-
 CHARITY_COMMISSION_API_KEY_NAME = 'APIKey'
+CHARITY_COMMISSION_API_KEY = os.getenv("CHARITY_COMMISSION_KEY")
 
 
 class CharitiesAuthPlugin(Plugin):
