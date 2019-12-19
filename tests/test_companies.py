@@ -203,6 +203,8 @@ class TestCompanyNetwork:
     def test_basic_board(self, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
         company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
         assert len(company_network) == 34
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
@@ -213,8 +215,6 @@ class TestCompanyNetwork:
         officer_2 = company_network.nodes[self.OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
-        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
-                PUNCHDRUNK_COMPANY_NAME)
 
     def test_mock_basic_board(self, requests_mock, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
@@ -223,6 +223,8 @@ class TestCompanyNetwork:
         requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
                           json=self.OFFICERS_JSON)
         company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
         assert len(company_network) == 3
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
@@ -233,6 +235,22 @@ class TestCompanyNetwork:
         officer_2 = company_network.nodes[self.OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
+
+    def test_mock_only_active_board(self, requests_mock, caplog):
+        """Test filtering out board_members so only active included."""
+        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
+                          json=self.PUNCHDRUNK_JSON)
+        requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
+                          json=self.OFFICERS_JSON)
+        company_network = get_company_network(
+                PUNCHDRUNK_COMPANY_ID, exclude_resigned_board_members=True)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
-        assert len(company_network) == 3
+        assert len(company_network) == 2
+        assert is_connected(company_network)
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 1
+        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        assert officer_1['data']['appointed_on'] == '2016-09-06'
+        assert 'resigned_on' not in officer_1['data']
+        assert self.OFFICER_ID_2 not in company_network.nodes

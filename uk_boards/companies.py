@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 import logging
 import os
 import time
@@ -25,6 +26,8 @@ load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
 COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
 COMPANIES_HOUSE_API_KEY_NAME = "COMPANIES_HOUSE_KEY"
 COMPANIES_HOUSE_API_KEY = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
+
+COMPANIES_HOUSE_DATE_FORMAT = '%Y-%m-%d'
 
 JSONDict = Dict[str, Any]
 
@@ -162,6 +165,12 @@ def get_company_network(company_number: Union[str, int] = '04547069',
         # Worth considering saving error here
         return None
     for officer in officers['items']:
+        if exclude_resigned_board_members:
+            if ('resigned_on' in officer and
+                datetime.strptime(
+                    officer['resigned_on'],
+                    COMPANIES_HOUSE_DATE_FORMAT) < datetime.today()):
+                continue
         officer_id = officer['links']['officer']['appointments'].split('/')[2]
         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
         g.add_node(officer_id, name=officer['name'], bipartite=1, data=officer)
