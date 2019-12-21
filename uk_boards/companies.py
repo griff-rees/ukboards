@@ -37,6 +37,7 @@ def companies_house_query(query: str,
                           sleep_time: int = 60,
                           url_prefix: str = COMPANIES_HOUSE_URL,
                           max_trials: int = 6,
+                          params: Dict[str, Union[str, bool, int]] = None,
                           ) -> Optional[JSONDict]:
     """
     Companies House API quiery repeated when necessary, returns json if valid.
@@ -50,8 +51,9 @@ def companies_house_query(query: str,
         auth_key (str): API key which is by default loaded from a .env file
         sleep_time (int): Number of seconds to pause after query error
         url_prefix (str): Prefix of url that defaults to COMPANIES HOUSE API
-        trials (int): Number of attempts to query, default with sleep_time
-                      exceeds the 5 min max query time
+        max_trials (int): Number of attempts to query, default with sleep_time
+                          exceeds the 5 min max query time
+        params (dict): Dictionary of usually optional parameters for search
 
     Returns:
         dict: A Dict of a valid JSON response (`200` response code)
@@ -68,7 +70,8 @@ def companies_house_query(query: str,
     trials = max_trials
     while trials:
         try:
-            response = requests.get(url_prefix + query, auth=auth_tuple)
+            response = requests.get(url_prefix + query, auth=auth_tuple,
+                                    params=params)
         except ConnectionError:
             raise InternetConnectionError
         if response.status_code == 200:
