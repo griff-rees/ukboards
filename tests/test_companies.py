@@ -233,6 +233,25 @@ class TestCompanyNetwork:
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
 
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_1_branch_board(self, caplog):
+        """Test a simple query of PUNCHDRUNK and all board members"""
+        company_network = get_company_network(PUNCHDRUNK_COMPANY_ID,
+                                              branches=1)
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+        assert len(company_network) == 34
+        assert is_connected(company_network)
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 33
+        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        assert officer_1['data']['appointed_on'] == '2016-09-06'
+        assert 'resigned_on' not in officer_1['data']
+        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        assert officer_2['data']['appointed_on'] == '2010-07-19'
+        assert officer_2['data']['resigned_on'] == '2018-10-08'
+
     def test_mock_basic_board(self, requests_mock, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
