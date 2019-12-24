@@ -173,6 +173,8 @@ def get_company_network(company_number: Union[str, int] = '04547069',
                 datetime.strptime(
                     officer['resigned_on'],
                     COMPANIES_HOUSE_DATE_FORMAT) < datetime.today()):
+                logger.debug(f"Skipping officer {officer['name']} because of "
+                             f"resignation on {officer['resigned_on']}")
                 continue
         officer_id = officer['links']['officer']['appointments'].split('/')[2]
         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
