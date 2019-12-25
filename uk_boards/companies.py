@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Union
 
 from dotenv import load_dotenv
 
-import networkx
+from networkx import Graph, compose, is_bipartite
 
 import requests
 from requests.exceptions import ConnectionError
@@ -29,7 +29,11 @@ COMPANIES_HOUSE_API_KEY = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
 
 COMPANIES_HOUSE_DATE_FORMAT = '%Y-%m-%d'
 
+COMPANIES_HOUSE_RESIGNATION_KEYWORD = 'resigned_on'
+
 JSONDict = Dict[str, Any]
+
+CompanyIDType = Union[str, int]
 
 
 def companies_house_query(query: str,
@@ -130,11 +134,12 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
     return company_number
 
 
-def get_company_network(company_number: Union[str, int] = '04547069',
+def get_company_network(company_number: CompanyIDType = '04547069',
                         branches: int = 0,
                         exclude_resigned_board_members: bool = False,
-                        exclude_non_active_companies: bool = False
-                        ) -> Optional[networkx.Graph]:
+                        exclude_non_active_companies: bool = False,
+                        include_significant_controllers: bool = False,
+                        ) -> Optional[Graph]:
     """
     Query the network of board members recursively.
 
@@ -144,8 +149,9 @@ def get_company_network(company_number: Union[str, int] = '04547069',
         * Consider removing print statement within the related loop
         * Refactor todo info into documentation
         * Add option of including network collected prior to error
+        * Add options for include_significant_controllers
     """
-    g = networkx.Graph()
+    g = Graph()
     logger.debug(f'Querying board network from {company_number}')
     company_number = stringify_company_number(company_number)
     company = companies_house_query('/company/' + company_number)
@@ -169,9 +175,9 @@ def get_company_network(company_number: Union[str, int] = '04547069',
         return None
     for officer in officers['items']:
         if exclude_resigned_board_members:
-            if ('resigned_on' in officer and
+            if (COMPANIES_HOUSE_RESIGNATION_KEYWORD in officer and
                 datetime.strptime(
-                    officer['resigned_on'],
+                    officer[COMPANIES_HOUSE_RESIGNATION_KEYWORD],
                     COMPANIES_HOUSE_DATE_FORMAT) < datetime.today()):
                 logger.debug(f"Skipping officer {officer['name']} because of "
                              f"resignation on {officer['resigned_on']}")
@@ -197,11 +203,11 @@ def get_company_network(company_number: Union[str, int] = '04547069',
                 related_company_number = \
                     related_company['appointed_to']['company_number']
                 if related_company_number not in g.nodes:
-                    subgraph = get_company_network(related_company_number,
-                                                   branches=branches - 1)
-                    if subgraph:
-                        g = networkx.compose(g, subgraph)
-                        assert networkx.is_bipartite(subgraph)
+                    related_network = get_company_network(
+                        related_company_number, branches=branches - 1)
+                    if related_network:
+                        g = compose(g, related_network)
+                        assert is_bipartite(related_network)
                     else:
                         logger.warning("Skipping company "
                                        f"{related_company_number} "
@@ -211,3 +217,20 @@ def get_company_network(company_number: Union[str, int] = '04547069',
                                        f"({company_number})")
                         print(related_company)
     return g
+
+
+def is_inactive_board_member(officer: dict):
+    """Return boolean of whether officer is no longer a board member."""
+    return (COMPANIES_HOUSE_RESIGNATION_KEYWORD in officer and
+            datetime.strptime(officer[COMPANIES_HOUSE_RESIGNATION_KEYWORD],
+                              COMPANIES_HOUSE_DATE_FORMAT) < datetime.today())
+
+
+def filter_active_board_members(g: Graph) -> Graph:
+    """Return a graph with only active board members."""
+    subgraph = g.copy()
+    inactive_board_members = [id for id, data in subgraph.nodes(data=True) if
+                              data['bipartite'] == 1 and
+                              is_inactive_board_member(data['data'])]
+    subgraph.remove_nodes_from(inactive_board_members)
+    return subgraph

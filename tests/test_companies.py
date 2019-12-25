@@ -17,6 +17,8 @@ import os
 from uk_boards.companies import (stringify_company_number,
                                  companies_house_query,
                                  get_company_network,
+                                 is_inactive_board_member,
+                                 filter_active_board_members,
                                  CompaniesHousePermissionError,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_URL)
@@ -180,52 +182,115 @@ class TestBasicQueries:
         # assert caplog.records == []
 
 
+OFFICER_ID_1 = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
+OFFICER_ID_2 = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
+
+PUNCHDRUNK_JSON = {
+    'company_number': PUNCHDRUNK_COMPANY_ID,
+    'company_status': 'active',
+    'company_name': PUNCHDRUNK_COMPANY_NAME,
+}
+OFFICERS_JSON = {
+        'active_count': 10,
+        'inactive_count': 0,
+        'items': [{
+            'name': 'LAST NAME, A First Name',
+            'address': {'address_line_1': 'A Road',
+                        'postal_code': 'N11 1NN',
+                        'premises': 'A Fancy Building'},
+            'appointed_on': '2016-09-06',
+            'officer_role': 'director',
+            'country_of_residence': 'England',
+            'date_of_birth': {'month': 4, 'year': 1978},
+            'links': {
+                'officer': {
+                    'appointments': f'/officers/{OFFICER_ID_1}'}
+                }
+            }, {
+            'name': 'ANOTHER LAST NAME, Another First Name',
+            'address': {'address_line_1': 'A Road',
+                        'postal_code': 'M11 1MM',
+                        'premises': 'A Flashy Building'},
+            'appointed_on': '2010-07-19',
+            'resigned_on': '2018-10-08',
+            'occupation': 'Senior Civil Servant',
+            'links': {
+                'officer': {
+                    'appointments': f'/officers/{OFFICER_ID_2}'}
+                }
+            }
+        ],
+        'items_per_page': 35,
+        'kind': 'officer-list',
+        'resigned_count': 1,
+        'total_results': 2}
+
+BARBICAN_THEATRE_COMPANY_ID = '09390947'
+BARBICAN_THEATRE_COMPANY_NAME = 'BARBICAN THEATRE PRODUCTIONS LIMITED'
+BARBICAN_THEATRE_JSON = {
+    'company_number': BARBICAN_THEATRE_COMPANY_ID,
+    'company_status': 'active',
+    'company_name': BARBICAN_THEATRE_COMPANY_NAME,
+}
+
+BARBICAN_OFFICERS_JSON = deepcopy(OFFICERS_JSON)
+del BARBICAN_OFFICERS_JSON['items'][0]
+APPOINTMENTS_1 = {
+    'items': [
+        {'appointed_to': {
+            'company_number': PUNCHDRUNK_COMPANY_ID
+        }}
+    ]
+}
+APPOINTMENTS_2 = {
+    'items': [
+        {'appointed_to': {
+            'company_number': BARBICAN_THEATRE_COMPANY_ID
+        }},
+        {'appointed_to': {
+            'company_number': PUNCHDRUNK_COMPANY_ID
+        }}
+    ]
+}
+
+
+@pytest.fixture
+def test_mock_1_hop(requests_mock):
+    requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
+                      json=PUNCHDRUNK_JSON)
+    requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
+                      json=OFFICERS_JSON)
+    requests_mock.get(officer_appointments_url(OFFICER_ID_1),
+                      json=APPOINTMENTS_1)
+    requests_mock.get(officer_appointments_url(OFFICER_ID_2),
+                      json=APPOINTMENTS_2)
+    requests_mock.get(company_url(BARBICAN_THEATRE_COMPANY_ID),
+                      json=BARBICAN_THEATRE_JSON)
+    requests_mock.get(company_officers_url(BARBICAN_THEATRE_COMPANY_ID),
+                      json=BARBICAN_OFFICERS_JSON)
+    return get_company_network(PUNCHDRUNK_COMPANY_ID, branches=1)
+
+
+def test_is_inactive_board_member() -> None:
+    """Test iterating over one active and one inactive."""
+    is_inactive = [is_inactive_board_member(officer) for officer in
+                   OFFICERS_JSON['items']]
+    assert [False, True] == is_inactive
+
+
+def test_filter_active_board(test_mock_1_hop, caplog):
+    """Test filtering for active board members."""
+    company_network = test_mock_1_hop
+    assert len(company_network) == 4
+    active_company_network = filter_active_board_members(company_network)
+    assert tuple(active_company_network.nodes) == (
+        PUNCHDRUNK_COMPANY_ID, OFFICER_ID_1, BARBICAN_THEATRE_COMPANY_ID)
+    assert caplog.records == []
+
+
 class TestCompanyNetwork:
 
-    """Test Constructing a Network."""
-
-    OFFICER_ID_1 = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
-    OFFICER_ID_2 = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
-
-    PUNCHDRUNK_JSON = {
-        'company_number': PUNCHDRUNK_COMPANY_ID,
-        'company_status': 'active',
-        'company_name': PUNCHDRUNK_COMPANY_NAME,
-    }
-    OFFICERS_JSON = {
-            'active_count': 10,
-            'inactive_count': 0,
-            'items': [{
-                'name': 'LAST NAME, A First Name',
-                'address': {'address_line_1': 'A Road',
-                            'postal_code': 'N11 1NN',
-                            'premises': 'A Fancy Building'},
-                'appointed_on': '2016-09-06',
-                'officer_role': 'director',
-                'country_of_residence': 'England',
-                'date_of_birth': {'month': 4, 'year': 1978},
-                'links': {
-                    'officer': {
-                        'appointments': f'/officers/{OFFICER_ID_1}'}
-                    }
-                }, {
-                'name': 'ANOTHER LAST NAME, Another First Name',
-                'address': {'address_line_1': 'A Road',
-                            'postal_code': 'M11 1MM',
-                            'premises': 'A Flashy Building'},
-                'appointed_on': '2010-07-19',
-                'resigned_on': '2018-10-08',
-                'occupation': 'Senior Civil Servant',
-                'links': {
-                    'officer': {
-                        'appointments': f'/officers/{OFFICER_ID_2}'}
-                    }
-                }
-            ],
-            'items_per_page': 35,
-            'kind': 'officer-list',
-            'resigned_count': 1,
-            'total_results': 2}
+    """Test constructing company networks."""
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
@@ -238,12 +303,13 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
-        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_ID_1]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        officer_2 = company_network.nodes[OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
+        assert caplog.records == []
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
@@ -257,10 +323,10 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
-        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_ID_1]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        officer_2 = company_network.nodes[OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
         assert caplog.records == []
@@ -268,9 +334,9 @@ class TestCompanyNetwork:
     def test_mock_basic_board(self, requests_mock, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.PUNCHDRUNK_JSON)
+                          json=PUNCHDRUNK_JSON)
         requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.OFFICERS_JSON)
+                          json=OFFICERS_JSON)
         company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
@@ -278,10 +344,10 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 2
-        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_ID_1]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        officer_2 = company_network.nodes[OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
         assert caplog.records == []
@@ -289,9 +355,9 @@ class TestCompanyNetwork:
     def test_mock_only_active_board(self, requests_mock, caplog):
         """Test filtering out board_members so only active included."""
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.PUNCHDRUNK_JSON)
+                          json=PUNCHDRUNK_JSON)
         requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.OFFICERS_JSON)
+                          json=OFFICERS_JSON)
         company_network = get_company_network(
                 PUNCHDRUNK_COMPANY_ID, exclude_resigned_board_members=True)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
@@ -300,64 +366,25 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 1
-        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_ID_1]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        assert self.OFFICER_ID_2 not in company_network.nodes
+        assert OFFICER_ID_2 not in company_network.nodes
         assert caplog.records == []
 
-    def test_mock_1_hop(self, requests_mock, caplog):
+    def test_mock_1_hop(self, test_mock_1_hop, caplog):
         """Test a mock one hop query."""
-        BARBICAN_THEATRE_COMPANY_ID = '09390947'
-        BARBICAN_THEATRE_COMPANY_NAME = 'BARBICAN THEATRE PRODUCTIONS LIMITED'
-        BARBICAN_THEATRE_JSON = {
-            'company_number': BARBICAN_THEATRE_COMPANY_ID,
-            'company_status': 'active',
-            'company_name': BARBICAN_THEATRE_COMPANY_NAME,
-        }
-        BARBICAN_OFFICERS_JSON = deepcopy(self.OFFICERS_JSON)
-        del BARBICAN_OFFICERS_JSON['items'][0]
-        APPOINTMENTS_1 = {
-            'items': [
-                {'appointed_to': {
-                    'company_number': PUNCHDRUNK_COMPANY_ID
-                }}
-            ]
-        }
-        APPOINTMENTS_2 = {
-            'items': [
-                {'appointed_to': {
-                    'company_number': BARBICAN_THEATRE_COMPANY_ID
-                }},
-                {'appointed_to': {
-                    'company_number': PUNCHDRUNK_COMPANY_ID
-                }}
-            ]
-        }
-        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.PUNCHDRUNK_JSON)
-        requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=self.OFFICERS_JSON)
-        requests_mock.get(officer_appointments_url(self.OFFICER_ID_1),
-                          json=APPOINTMENTS_1)
-        requests_mock.get(officer_appointments_url(self.OFFICER_ID_2),
-                          json=APPOINTMENTS_2)
-        requests_mock.get(company_url(BARBICAN_THEATRE_COMPANY_ID),
-                          json=BARBICAN_THEATRE_JSON)
-        requests_mock.get(company_officers_url(BARBICAN_THEATRE_COMPANY_ID),
-                          json=BARBICAN_OFFICERS_JSON)
-        company_network = get_company_network(
-                PUNCHDRUNK_COMPANY_ID, branches=1)
+        company_network = test_mock_1_hop
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
         assert len(company_network) == 4
         assert is_connected(company_network)
         companies, board_members = bipartite.sets(company_network)
         assert len(board_members) == 2
-        officer_1 = company_network.nodes[self.OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_ID_1]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[self.OFFICER_ID_2]
+        officer_2 = company_network.nodes[OFFICER_ID_2]
         assert officer_2['data']['appointed_on'] == '2010-07-19'
         assert officer_2['data']['resigned_on'] == '2018-10-08'
         assert caplog.records == []
