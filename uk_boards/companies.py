@@ -137,11 +137,12 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
 
 def get_company_network(company_number: CompanyIDType = '04547069',
                         branches: int = 0,
-                        exclude_resigned_board_members: bool = False,
+                        # exclude_resigned_board_members: bool = False,
                         exclude_non_active_companies: bool = False,
                         include_significant_controllers: bool = False,
                         enforce_missing_ties: bool = False,
-                        ) -> Optional[Graph]:
+                        include_officers: bool = True,
+                        **kwargs) -> Optional[Graph]:
     """
     Query the network of board members recursively.
 
@@ -169,57 +170,108 @@ def get_company_network(company_number: CompanyIDType = '04547069',
     logger.debug(company['company_name'])
     g.add_node(company_number, name=company['company_name'],
                bipartite=0, data=company)
-    officers = companies_house_query(f'/company/{company_number}/officers')
-    if not officers:
-        logger.error("Error requesting officers of company "
-                     f"{company['company_name']} ({company_number})")
+    if include_officers:
+        officers = get_company_officers(company_number, **kwargs)
+        for officer_id, officer_data in officers.items():
+            g.add_node(officer_id, name=officer_data['name'], bipartite=1,
+                       data=officer_data)
+            g.add_edge(company_number, officer_id)
+            if branches:
+                appointments = companies_house_query(
+                        f'/officers/{officer_id}/appointments')
+                if not appointments:
+                    logger.error("Error requesting appointments of board "
+                                 f"member {officer_data['name']} ({officer_id}) of "
+                                 f"company {company['company_name']} "
+                                 f"({company_number})")
+                    # Worth considering saving error here
+                    continue
+                for related_company in appointments['items']:
+                    # if not related_company:
+                    #     assert False
+                    #     logger.warning("Failed request")
+                    related_company_number = \
+                        related_company['appointed_to']['company_number']
+                    if related_company_number not in g.nodes:
+                        related_network = get_company_network(
+                            related_company_number, branches=branches - 1)
+                        if related_network:
+                            g = compose(g, related_network)
+                            assert is_bipartite(g)
+                            # Refactoring will add links to all edges
+                            if not is_connected(g) and enforce_missing_ties:
+                                g.add_edge(related_company_number, officer_id,
+                                           data=related_company)
+                        else:
+                            logger.warning("Skipping company "
+                                           f"{related_company_number} "
+                                           f"from board member {officer_data['name']} "
+                                           f"({officer_id}) of company "
+                                           f"{company['company_name']} "
+                                           f"({company_number})")
+                            print(related_company)
+    return g
+
+
+def get_company_officers(company_number: CompanyIDType = '04547069',
+                         exclude_resigned_board_members: bool = False,
+                         ) -> Optional[Dict[str, JSONDict]]:
+    officers = {}
+    officers_query = companies_house_query(f'/company/{company_number}/officers')
+    if not officers_query:
+        logger.error(f"Error requesting officers of company {company_number}")
         # Worth considering saving error here
         return None
-    for officer in officers['items']:
+    for officer in officers_query['items']:
         if exclude_resigned_board_members:
             if is_inactive_board_member(officer):
                 logger.debug(f"Skipping officer {officer['name']} because of "
                              f"resignation on {officer['resigned_on']}")
                 continue
         officer_id = officer['links']['officer']['appointments'].split('/')[2]
+        officers[officer_id] = officer
         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
-        g.add_node(officer_id, name=officer['name'], bipartite=1, data=officer)
-        g.add_edge(company_number, officer_id)
-        if branches:
-            appointments = companies_house_query(
-                    f'/officers/{officer_id}/appointments')
-            if not appointments:
-                logger.error("Error requesting appointments of board "
-                             f"member {officer['name']} ({officer_id}) of "
-                             f"company {company['company_name']} "
-                             f"({company_number})")
-                # Worth considering saving error here
-                continue
-            for related_company in appointments['items']:
-                # if not related_company:
-                #     assert False
-                #     logger.warning("Failed request")
-                related_company_number = \
-                    related_company['appointed_to']['company_number']
-                if related_company_number not in g.nodes:
-                    related_network = get_company_network(
-                        related_company_number, branches=branches - 1)
-                    if related_network:
-                        g = compose(g, related_network)
-                        assert is_bipartite(g)
-                        # Refactoring will add links to all edges
-                        if not is_connected(g) and enforce_missing_ties:
-                            g.add_edge(related_company_number, officer_id,
-                                       data=related_company)
-                    else:
-                        logger.warning("Skipping company "
-                                       f"{related_company_number} "
-                                       f"from board member {officer['name']} "
-                                       f"({officer_id}) of company "
-                                       f"{company['company_name']} "
-                                       f"({company_number})")
-                        print(related_company)
-    return g
+    return officers
+
+#         officer_id = officer['links']['officer']['appointments'].split('/')[2]
+#         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
+#         g.add_node(officer_id, name=officer['name'], bipartite=1, data=officer)
+#         g.add_edge(company_number, officer_id)
+#         if branches:
+#             appointments = companies_house_query(
+#                     f'/officers/{officer_id}/appointments')
+#             if not appointments:
+#                 logger.error("Error requesting appointments of board "
+#                              f"member {officer['name']} ({officer_id}) of "
+#                              f"company {company['company_name']} "
+#                              f"({company_number})")
+#                 # Worth considering saving error here
+#                 continue
+#             for related_company in appointments['items']:
+#                 # if not related_company:
+#                 #     assert False
+#                 #     logger.warning("Failed request")
+#                 related_company_number = \
+#                     related_company['appointed_to']['company_number']
+#                 if related_company_number not in g.nodes:
+#                     related_network = get_company_network(
+#                         related_company_number, branches=branches - 1)
+#                     if related_network:
+#                         g = compose(g, related_network)
+#                         assert is_bipartite(g)
+#                         # Refactoring will add links to all edges
+#                         if not is_connected(g) and enforce_missing_ties:
+#                             g.add_edge(related_company_number, officer_id,
+#                                        data=related_company)
+#                     else:
+#                         logger.warning("Skipping company "
+#                                        f"{related_company_number} "
+#                                        f"from board member {officer['name']} "
+#                                        f"({officer_id}) of company "
+#                                        f"{company['company_name']} "
+#                                        f"({company_number})")
+#                         print(related_company)
+#     return g
 
 
 def is_inactive_board_member(officer: dict):

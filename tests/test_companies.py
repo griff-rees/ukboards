@@ -416,6 +416,18 @@ class TestCompanyNetwork:
         assert {OFFICER_2_ID, OFFICER_3_ID} < barbican_theatre_board
         assert caplog.records == []
 
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    @pytest.mark.xfail
+    def test_0_branch_warning_case(self, caplog):
+        """0 branch query old error on company '01086582', needs fix."""
+        assert False
+        company_network = get_company_network('01086582',
+                                              branches=1,
+                                              enforce_missing_ties=True)
+        assert len(company_network) == 1334
+        assert len(caplog.records) == 4
+
     def test_mock_basic_board(self, requests_mock, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
