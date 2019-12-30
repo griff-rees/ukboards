@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from dotenv import load_dotenv
 
-from networkx import is_connected
+from networkx import is_connected, connected_components, neighbors, Graph
 from networkx.algorithms import bipartite
 
 import pytest
@@ -182,15 +182,16 @@ class TestBasicQueries:
         # assert caplog.records == []
 
 
-OFFICER_ID_1 = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
-OFFICER_ID_2 = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
+OFFICER_1_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
+OFFICER_2_ID = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
+OFFICER_3_ID = 'gTNMkddTIdg1mdQVD5P95u4rjXs'
 
 PUNCHDRUNK_JSON = {
     'company_number': PUNCHDRUNK_COMPANY_ID,
     'company_status': 'active',
     'company_name': PUNCHDRUNK_COMPANY_NAME,
 }
-OFFICERS_JSON = {
+PUNCHDRUNK_OFFICERS_JSON = {
         'active_count': 10,
         'inactive_count': 0,
         'items': [{
@@ -204,7 +205,7 @@ OFFICERS_JSON = {
             'date_of_birth': {'month': 4, 'year': 1978},
             'links': {
                 'officer': {
-                    'appointments': f'/officers/{OFFICER_ID_1}'}
+                    'appointments': f'/officers/{OFFICER_1_ID}'}
                 }
             }, {
             'name': 'ANOTHER LAST NAME, Another First Name',
@@ -216,7 +217,7 @@ OFFICERS_JSON = {
             'occupation': 'Senior Civil Servant',
             'links': {
                 'officer': {
-                    'appointments': f'/officers/{OFFICER_ID_2}'}
+                    'appointments': f'/officers/{OFFICER_2_ID}'}
                 }
             }
         ],
@@ -233,8 +234,17 @@ BARBICAN_THEATRE_JSON = {
     'company_name': BARBICAN_THEATRE_COMPANY_NAME,
 }
 
-BARBICAN_OFFICERS_JSON = deepcopy(OFFICERS_JSON)
+BARBICAN_OFFICERS_JSON = deepcopy(PUNCHDRUNK_OFFICERS_JSON)
 del BARBICAN_OFFICERS_JSON['items'][0]
+
+SHARED_EXPERIENCE_COMPANY_ID = '01254833'
+SHARED_EXPERIENCE_COMPANY_NAME = 'SHARED EXPERIENCE LIMITED'
+SHARED_EXPERIENCE_JSON = {
+    'company_number': SHARED_EXPERIENCE_COMPANY_ID,
+    'company_status': 'active',
+    'company_name': SHARED_EXPERIENCE_COMPANY_NAME,
+}
+
 APPOINTMENTS_1 = {
     'items': [
         {'appointed_to': {
@@ -253,16 +263,28 @@ APPOINTMENTS_2 = {
     ]
 }
 
+APPOINTMENTS_3 = {
+    'items': [
+        {'appointed_to': {
+            'company_number': BARBICAN_THEATRE_COMPANY_ID
+        }},
+        {'appointed_to': {
+            'company_number': SHARED_EXPERIENCE_COMPANY_ID
+        }, 'resigned_on': '2008-10-16', 'appointed_on': '2002-05-20'
+        }
+    ]
+}
+
 
 @pytest.fixture
-def test_mock_1_hop(requests_mock):
+def test_mock_1_hop(requests_mock) -> Graph:
     requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
                       json=PUNCHDRUNK_JSON)
     requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                      json=OFFICERS_JSON)
-    requests_mock.get(officer_appointments_url(OFFICER_ID_1),
+                      json=PUNCHDRUNK_OFFICERS_JSON)
+    requests_mock.get(officer_appointments_url(OFFICER_1_ID),
                       json=APPOINTMENTS_1)
-    requests_mock.get(officer_appointments_url(OFFICER_ID_2),
+    requests_mock.get(officer_appointments_url(OFFICER_2_ID),
                       json=APPOINTMENTS_2)
     requests_mock.get(company_url(BARBICAN_THEATRE_COMPANY_ID),
                       json=BARBICAN_THEATRE_JSON)
@@ -271,20 +293,30 @@ def test_mock_1_hop(requests_mock):
     return get_company_network(PUNCHDRUNK_COMPANY_ID, branches=1)
 
 
+def basic_officer_tests(company_network: Graph) -> None:
+    """Fixture for pattern of officer tests."""
+    officer_1 = company_network.nodes[OFFICER_1_ID]
+    assert officer_1['data']['appointed_on'] == '2016-09-06'
+    assert 'resigned_on' not in officer_1['data']
+    officer_2 = company_network.nodes[OFFICER_2_ID]
+    assert officer_2['data']['appointed_on'] == '2010-07-19'
+    assert officer_2['data']['resigned_on'] == '2018-10-08'
+
+
 def test_is_inactive_board_member() -> None:
     """Test iterating over one active and one inactive."""
     is_inactive = [is_inactive_board_member(officer) for officer in
-                   OFFICERS_JSON['items']]
+                   PUNCHDRUNK_OFFICERS_JSON['items']]
     assert [False, True] == is_inactive
 
 
-def test_filter_active_board(test_mock_1_hop, caplog):
+def test_filter_active_board(test_mock_1_hop, caplog) -> None:
     """Test filtering for active board members."""
     company_network = test_mock_1_hop
     assert len(company_network) == 4
     active_company_network = filter_active_board_members(company_network)
     assert tuple(active_company_network.nodes) == (
-        PUNCHDRUNK_COMPANY_ID, OFFICER_ID_1, BARBICAN_THEATRE_COMPANY_ID)
+        PUNCHDRUNK_COMPANY_ID, OFFICER_1_ID, BARBICAN_THEATRE_COMPANY_ID)
     assert caplog.records == []
 
 
@@ -303,32 +335,47 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
-        officer_1 = company_network.nodes[OFFICER_ID_1]
-        assert officer_1['data']['appointed_on'] == '2016-09-06'
-        assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[OFFICER_ID_2]
-        assert officer_2['data']['appointed_on'] == '2010-07-19'
-        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        basic_officer_tests(company_network)
         assert caplog.records == []
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
-    def test_1_branch_board(self, caplog):
-        """Test a simple query of PUNCHDRUNK and all board members"""
-        company_network = get_company_network(PUNCHDRUNK_COMPANY_ID,
+    def test_1_branch_board_disconnected(self, caplog):
+        """1 branch of Barbican Theatre Company has absent resigned link."""
+        company_network = get_company_network(BARBICAN_THEATRE_COMPANY_ID,
                                               branches=1)
-        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
-                PUNCHDRUNK_COMPANY_NAME)
-        assert len(company_network) == 34
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 367
+        assert not is_connected(company_network)
+        barbican_theatre_net, shared_experience_net = connected_components(
+            company_network)
+        assert len(shared_experience_net) == 35
+        assert len(barbican_theatre_net) == 332
+        for officer_id in OFFICER_1_ID, OFFICER_2_ID, OFFICER_3_ID:
+            assert officer_id in barbican_theatre_net
+            assert officer_id not in shared_experience_net
+        assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_1_branch_enforce_missing_ties(self, caplog):
+        """1 branch of Barbican Theatre Company with added missing link."""
+        company_network = get_company_network(BARBICAN_THEATRE_COMPANY_ID,
+                                              branches=1,
+                                              enforce_missing_ties=True)
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 367
         assert is_connected(company_network)
-        punchdrunk, board_members = bipartite.sets(company_network)
-        assert len(board_members) == 33
-        officer_1 = company_network.nodes[OFFICER_ID_1]
-        assert officer_1['data']['appointed_on'] == '2016-09-06'
-        assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[OFFICER_ID_2]
-        assert officer_2['data']['appointed_on'] == '2010-07-19'
-        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        barbican_theatre_board, shared_experience_board = (
+            set(neighbors(company_network, n))
+            for n in (BARBICAN_THEATRE_COMPANY_ID,
+                      SHARED_EXPERIENCE_COMPANY_ID))
+        assert OFFICER_1_ID not in barbican_theatre_board
+        assert OFFICER_3_ID in shared_experience_board
+        assert not {OFFICER_1_ID, OFFICER_2_ID} < shared_experience_board
+        assert {OFFICER_2_ID, OFFICER_3_ID} < barbican_theatre_board
         assert caplog.records == []
 
     def test_mock_basic_board(self, requests_mock, caplog):
@@ -336,7 +383,7 @@ class TestCompanyNetwork:
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
                           json=PUNCHDRUNK_JSON)
         requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=OFFICERS_JSON)
+                          json=PUNCHDRUNK_OFFICERS_JSON)
         company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
@@ -344,12 +391,7 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 2
-        officer_1 = company_network.nodes[OFFICER_ID_1]
-        assert officer_1['data']['appointed_on'] == '2016-09-06'
-        assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[OFFICER_ID_2]
-        assert officer_2['data']['appointed_on'] == '2010-07-19'
-        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        basic_officer_tests(company_network)
         assert caplog.records == []
 
     def test_mock_only_active_board(self, requests_mock, caplog):
@@ -357,7 +399,7 @@ class TestCompanyNetwork:
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
                           json=PUNCHDRUNK_JSON)
         requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=OFFICERS_JSON)
+                          json=PUNCHDRUNK_OFFICERS_JSON)
         company_network = get_company_network(
                 PUNCHDRUNK_COMPANY_ID, exclude_resigned_board_members=True)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
@@ -366,10 +408,10 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 1
-        officer_1 = company_network.nodes[OFFICER_ID_1]
+        officer_1 = company_network.nodes[OFFICER_1_ID]
         assert officer_1['data']['appointed_on'] == '2016-09-06'
         assert 'resigned_on' not in officer_1['data']
-        assert OFFICER_ID_2 not in company_network.nodes
+        assert OFFICER_2_ID not in company_network.nodes
         assert caplog.records == []
 
     def test_mock_1_hop(self, test_mock_1_hop, caplog):
@@ -381,10 +423,5 @@ class TestCompanyNetwork:
         assert is_connected(company_network)
         companies, board_members = bipartite.sets(company_network)
         assert len(board_members) == 2
-        officer_1 = company_network.nodes[OFFICER_ID_1]
-        assert officer_1['data']['appointed_on'] == '2016-09-06'
-        assert 'resigned_on' not in officer_1['data']
-        officer_2 = company_network.nodes[OFFICER_ID_2]
-        assert officer_2['data']['appointed_on'] == '2010-07-19'
-        assert officer_2['data']['resigned_on'] == '2018-10-08'
+        basic_officer_tests(company_network)
         assert caplog.records == []

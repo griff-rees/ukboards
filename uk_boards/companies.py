@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Union
 
 from dotenv import load_dotenv
 
-from networkx import Graph, compose, is_bipartite
+from networkx import Graph, compose, is_bipartite, is_connected
 
 import requests
 from requests.exceptions import ConnectionError
@@ -68,7 +68,8 @@ def companies_house_query(query: str,
 
     Todo:
         * Cover all exceptions in tests
-        * Consider more effient means of managing 429 Too Many Requests errors
+        * Consider better means of managing 429 Too Many Requests error
+          by checking header
     """
     auth_tuple = (auth_key, "")
     trials = max_trials
@@ -139,6 +140,7 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                         exclude_resigned_board_members: bool = False,
                         exclude_non_active_companies: bool = False,
                         include_significant_controllers: bool = False,
+                        enforce_missing_ties: bool = False,
                         ) -> Optional[Graph]:
     """
     Query the network of board members recursively.
@@ -175,10 +177,7 @@ def get_company_network(company_number: CompanyIDType = '04547069',
         return None
     for officer in officers['items']:
         if exclude_resigned_board_members:
-            if (COMPANIES_HOUSE_RESIGNATION_KEYWORD in officer and
-                datetime.strptime(
-                    officer[COMPANIES_HOUSE_RESIGNATION_KEYWORD],
-                    COMPANIES_HOUSE_DATE_FORMAT) < datetime.today()):
+            if is_inactive_board_member(officer):
                 logger.debug(f"Skipping officer {officer['name']} because of "
                              f"resignation on {officer['resigned_on']}")
                 continue
@@ -207,7 +206,11 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                         related_company_number, branches=branches - 1)
                     if related_network:
                         g = compose(g, related_network)
-                        assert is_bipartite(related_network)
+                        assert is_bipartite(g)
+                        # Refactoring will add links to all edges
+                        if not is_connected(g) and enforce_missing_ties:
+                            g.add_edge(related_company_number, officer_id,
+                                       data=related_company)
                     else:
                         logger.warning("Skipping company "
                                        f"{related_company_number} "
