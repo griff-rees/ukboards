@@ -6,7 +6,7 @@ import logging
 import os
 import time
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Generator, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 
@@ -34,6 +34,8 @@ COMPANIES_HOUSE_RESIGNATION_KEYWORD = 'resigned_on'
 JSONDict = Dict[str, Any]
 
 CompanyIDType = Union[str, int]
+
+JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
 
 
 def companies_house_query(query: str,
@@ -137,11 +139,11 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
 
 def get_company_network(company_number: CompanyIDType = '04547069',
                         branches: int = 0,
-                        # exclude_resigned_board_members: bool = False,
                         exclude_non_active_companies: bool = False,
                         include_significant_controllers: bool = False,
                         enforce_missing_ties: bool = False,
                         include_officers: bool = True,
+                        include_edge_data: bool = False,
                         **kwargs) -> Optional[Graph]:
     """
     Query the network of board members recursively.
@@ -172,52 +174,49 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                bipartite=0, data=company)
     if include_officers:
         officers = get_company_officers(company_number, **kwargs)
-        for officer_id, officer_data in officers.items():
+        for officer_id, officer_data in officers:
             g.add_node(officer_id, name=officer_data['name'], bipartite=1,
                        data=officer_data)
             g.add_edge(company_number, officer_id)
-            if branches:
-                appointments = companies_house_query(
-                        f'/officers/{officer_id}/appointments')
-                if not appointments:
-                    logger.error("Error requesting appointments of board "
-                                 f"member {officer_data['name']} ({officer_id}) of "
-                                 f"company {company['company_name']} "
-                                 f"({company_number})")
-                    # Worth considering saving error here
-                    continue
-                for related_company in appointments['items']:
-                    # if not related_company:
-                    #     assert False
-                    #     logger.warning("Failed request")
-                    related_company_number = \
-                        related_company['appointed_to']['company_number']
-                    if related_company_number not in g.nodes:
+            if branches or include_edge_data:
+                for related_company_id, appointment_data in \
+                        get_officer_appointments(officer_id,
+                                                 company=company,
+                                                 company_number=company_number,
+                                                 officer_data=officer_data):
+                    if (include_edge_data and
+                            related_company_id == company_number):
+                        g[company_number][officer_id][
+                                'data'] = appointment_data
+                    elif related_company_id not in g.nodes:
                         related_network = get_company_network(
-                            related_company_number, branches=branches - 1)
+                            related_company_id, branches=branches - 1)
                         if related_network:
                             g = compose(g, related_network)
                             assert is_bipartite(g)
-                            # Refactoring will add links to all edges
                             if not is_connected(g) and enforce_missing_ties:
-                                g.add_edge(related_company_number, officer_id,
-                                           data=related_company)
+                                if include_edge_data:
+                                    g.add_edge(related_company_id, officer_id,
+                                               data=appointment_data)
+                                else:
+                                    g.add_edge(related_company_id, officer_id)
                         else:
                             logger.warning("Skipping company "
-                                           f"{related_company_number} "
-                                           f"from board member {officer_data['name']} "
+                                           f"{related_company_id} "
+                                           "from board member "
+                                           f"{officer_data['name']} "
                                            f"({officer_id}) of company "
                                            f"{company['company_name']} "
                                            f"({company_number})")
-                            print(related_company)
     return g
 
 
 def get_company_officers(company_number: CompanyIDType = '04547069',
                          exclude_resigned_board_members: bool = False,
-                         ) -> Optional[Dict[str, JSONDict]]:
-    officers = {}
-    officers_query = companies_house_query(f'/company/{company_number}/officers')
+                         ) -> JSONItemsGenerator:
+    """Yield officer_id and officer data for from company_number's board."""
+    officers_query = companies_house_query(
+            f'/company/{company_number}/officers')
     if not officers_query:
         logger.error(f"Error requesting officers of company {company_number}")
         # Worth considering saving error here
@@ -229,52 +228,33 @@ def get_company_officers(company_number: CompanyIDType = '04547069',
                              f"resignation on {officer['resigned_on']}")
                 continue
         officer_id = officer['links']['officer']['appointments'].split('/')[2]
-        officers[officer_id] = officer
         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
-    return officers
-
-#         officer_id = officer['links']['officer']['appointments'].split('/')[2]
-#         logger.debug(f'{company_number} {officer["name"]} {officer_id}')
-#         g.add_node(officer_id, name=officer['name'], bipartite=1, data=officer)
-#         g.add_edge(company_number, officer_id)
-#         if branches:
-#             appointments = companies_house_query(
-#                     f'/officers/{officer_id}/appointments')
-#             if not appointments:
-#                 logger.error("Error requesting appointments of board "
-#                              f"member {officer['name']} ({officer_id}) of "
-#                              f"company {company['company_name']} "
-#                              f"({company_number})")
-#                 # Worth considering saving error here
-#                 continue
-#             for related_company in appointments['items']:
-#                 # if not related_company:
-#                 #     assert False
-#                 #     logger.warning("Failed request")
-#                 related_company_number = \
-#                     related_company['appointed_to']['company_number']
-#                 if related_company_number not in g.nodes:
-#                     related_network = get_company_network(
-#                         related_company_number, branches=branches - 1)
-#                     if related_network:
-#                         g = compose(g, related_network)
-#                         assert is_bipartite(g)
-#                         # Refactoring will add links to all edges
-#                         if not is_connected(g) and enforce_missing_ties:
-#                             g.add_edge(related_company_number, officer_id,
-#                                        data=related_company)
-#                     else:
-#                         logger.warning("Skipping company "
-#                                        f"{related_company_number} "
-#                                        f"from board member {officer['name']} "
-#                                        f"({officer_id}) of company "
-#                                        f"{company['company_name']} "
-#                                        f"({company_number})")
-#                         print(related_company)
-#     return g
+        yield officer_id, officer
 
 
-def is_inactive_board_member(officer: dict):
+def get_officer_appointments(officer_id: str, **kwargs) -> JSONItemsGenerator:
+    """Query officer appointments and yield company_id, appointment_data."""
+    appointments = companies_house_query(
+            f'/officers/{officer_id}/appointments')
+    if not appointments:
+        if {'company', 'company_number', 'officer_data'} <= kwargs:
+            company, company_number, officer_data = (kwargs['company'],
+                                                     kwargs['company_number'],
+                                                     kwargs['officer_data'])
+            logger.error("Error requesting appointments of board "
+                         f"member {officer_data['name']} ({officer_id}) of "
+                         f"company {company['company_name']} "
+                         f"({company_number})")
+        else:
+            logger.error("Error requesting appointments of board "
+                         f"member {officer_id}")
+        # Worth considering saving error here
+        return None
+    for appointment in appointments['items']:
+        yield appointment['appointed_to']['company_number'], appointment
+
+
+def is_inactive_board_member(officer: dict) -> bool:
     """Return boolean of whether officer is no longer a board member."""
     return (COMPANIES_HOUSE_RESIGNATION_KEYWORD in officer and
             datetime.strptime(officer[COMPANIES_HOUSE_RESIGNATION_KEYWORD],
