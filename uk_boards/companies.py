@@ -139,16 +139,43 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
 
 def get_company_network(company_number: CompanyIDType = '04547069',
                         branches: int = 0,
-                        exclude_non_active_companies: bool = False,
                         include_significant_controllers: bool = False,
                         enforce_missing_ties: bool = False,
                         include_officers: bool = True,
                         include_edge_data: bool = False,
                         **kwargs) -> Optional[Graph]:
     """
-    Query the network of board members recursively.
+    Recursively query a bipartite network of companies and boards.
 
-    Note:
+    This function returns a bipartite NetworkX `Graph` where bipartite is 0 for
+    companies and 1 for board members.
+
+    Args:
+        company_number (CompanyIDType): An int or str of a company_id
+        branches (int): A positive number of hops to follow in snowball
+            sampling from board members to other companies they set on
+        include_significant_controllers (bool): Whether to also follow
+            significant controllers as another type of board member
+        enforce_missing_ties (bool): Whether to add ties in cases where there
+            is a record of a board membership in `get_officer_appointments`
+            that doesn't appear in that company's `get_company_officers` query.
+        include_officers (bool): Include officers in network queries.
+        include_edge_data (bool): Include JSON data from
+            `get_officer_appointments` as a `data` attribute for edges.
+        params (dict): Dictionary of usually optional parameters for search
+        **kwargs: Additional parameters to send to api calls.
+
+            exclude_non_active_companies (bool) is passed to `get_company`.
+
+            exclude_resigned_board_members (bool) is passed to
+            `get_company_officers`.
+
+    Returns:
+        Graph: A bipartite NetworkX `Graph` where bipartite is 0 for
+               companies and 1 for board members.
+        None: If no company is found.
+
+    Todo:
         * 429 Too Many Requests error raised if > 600/min
         * Test officers error on company '01086582'
         * Consider removing print statement within the related loop
@@ -158,17 +185,9 @@ def get_company_network(company_number: CompanyIDType = '04547069',
     """
     g = Graph()
     logger.debug(f'Querying board network from {company_number}')
-    company_number = stringify_company_number(company_number)
-    company = companies_house_query('/company/' + company_number)
+    company = get_company(company_number, **kwargs)
     if not company:
-        logger.error(f'Querying data on company {company_number} failed')
         return None
-    if exclude_non_active_companies:
-        if company['company_status'] != 'active':
-            logger.warning(f'Excluding company {company_number} because '
-                           f'status is {company["company_status"]}. '
-                           f'Company name: {company["company_name"]}')
-            return None
     logger.debug(company['company_name'])
     g.add_node(company_number, name=company['company_name'],
                bipartite=0, data=company)
@@ -179,16 +198,21 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                        data=officer_data)
             g.add_edge(company_number, officer_id)
             if branches or include_edge_data:
-                for related_company_id, appointment_data in \
-                        get_officer_appointments(officer_id,
-                                                 company=company,
-                                                 company_number=company_number,
-                                                 officer_data=officer_data):
-                    if (include_edge_data and
-                            related_company_id == company_number):
-                        g[company_number][officer_id][
-                                'data'] = appointment_data
-                    elif related_company_id not in g.nodes:
+                appointments = {related_company_id: appointment_data
+                                for related_company_id, appointment_data in
+                                get_officer_appointments(
+                                    officer_id,
+                                    company=company,
+                                    company_number=company_number,
+                                    officer_data=officer_data)}
+            if include_edge_data:
+                g.add_edge(company_number, officer_id,
+                           data=appointments.pop(company_number))
+            else:
+                g.add_edge(company_number, officer_id)
+            if branches:
+                for related_company_id in appointments:
+                    if related_company_id not in g.nodes:
                         related_network = get_company_network(
                             related_company_id, branches=branches - 1)
                         if related_network:
@@ -197,7 +221,8 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                             if not is_connected(g) and enforce_missing_ties:
                                 if include_edge_data:
                                     g.add_edge(related_company_id, officer_id,
-                                               data=appointment_data)
+                                               data=appointments[
+                                                   related_company_id])
                                 else:
                                     g.add_edge(related_company_id, officer_id)
                         else:
@@ -209,6 +234,58 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                                            f"{company['company_name']} "
                                            f"({company_number})")
     return g
+
+
+# def get_network_branches(officer_id: str,
+#                          officer_data: JSONDict,
+#                          company_number: str,
+#                          company: JSONDict) -> Optional[Graph]:
+#     for related_company_id, appointment_data in get_officer_appointments(
+#             officer_id,
+#             officer_data=officer_data,
+#             company_number=company_number
+#             company=company):
+#         if (include_edge_data and related_company_id == company_number):
+#             g[company_number][officer_id]['data'] = appointment_data
+#             if not branches:
+#                 break
+#         elif related_company_id not in g.nodes:
+#             related_network = get_company_network(
+#                 related_company_id, branches=branches - 1)
+#             if related_network:
+#                 g = compose(g, related_network)
+#                 assert is_bipartite(g)
+#                 if not is_connected(g) and enforce_missing_ties:
+#                     if include_edge_data:
+#                         g.add_edge(related_company_id, officer_id,
+#                                    data=appointment_data)
+#                     else:
+#                         g.add_edge(related_company_id, officer_id)
+#             else:
+#                 logger.warning("Skipping company "
+#                                f"{related_company_id} "
+#                                "from board member "
+#                                f"{officer_data['name']} "
+#                                f"({officer_id}) of company "
+#                                f"{company['company_name']} "
+#                                f"({company_number})")
+
+
+def get_company(company_number: CompanyIDType = '04547069',
+                exclude_non_active_companies: bool = False,
+                **kwargs) -> Optional[JSONDict]:
+    company_number = stringify_company_number(company_number)
+    company = companies_house_query('/company/' + company_number)
+    if not company:
+        logger.error(f'Querying data on company {company_number} failed')
+        return None
+    if exclude_non_active_companies:
+        if company['company_status'] != 'active':
+            logger.warning(f'Excluding company {company_number} because '
+                           f'status is {company["company_status"]}. '
+                           f'Company name: {company["company_name"]}')
+            return None
+    return company
 
 
 def get_company_officers(company_number: CompanyIDType = '04547069',

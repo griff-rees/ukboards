@@ -188,6 +188,7 @@ class TestBasicQueries:
 OFFICER_1_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
 OFFICER_2_ID = '3ZgWYymGd0aqI1FZ_rpyNaiI2vM'
 OFFICER_3_ID = 'gTNMkddTIdg1mdQVD5P95u4rjXs'
+OFFICER_4_ID = 'an-officer-id'
 
 PUNCHDRUNK_JSON = {
     'company_number': PUNCHDRUNK_COMPANY_ID,
@@ -261,7 +262,7 @@ SHARED_OFFICERS_JSON['items'].append(
      'appointed_on': '2019-01-15',
      'links': {
          'officer': {
-                'appointments': f'/officers/an_officer_id'}
+                'appointments': f'/officers/{OFFICER_4_ID}'}
             }})
 del SHARED_OFFICERS_JSON['items'][:2]
 
@@ -288,6 +289,14 @@ APPOINTMENTS_3 = {
         {'appointed_to': {
             'company_number': BARBICAN_THEATRE_COMPANY_ID
         }, 'appointed_on': '2015-01-15'},
+        {'appointed_to': {
+            'company_number': SHARED_EXPERIENCE_COMPANY_ID
+        }, 'resigned_on': '2008-10-16', 'appointed_on': '2002-05-20'}
+    ]
+}
+
+APPOINTMENTS_4 = {
+    'items': [
         {'appointed_to': {
             'company_number': SHARED_EXPERIENCE_COMPANY_ID
         }, 'resigned_on': '2008-10-16', 'appointed_on': '2002-05-20'}
@@ -323,6 +332,8 @@ def test_mock_api_get() -> Callable:
                           json=APPOINTMENTS_2)
         requests_mock.get(officer_appointments_url(OFFICER_3_ID),
                           json=APPOINTMENTS_3)
+        requests_mock.get(officer_appointments_url(OFFICER_3_ID),
+                          json=APPOINTMENTS_4)
 
         return get_company_network(company_number, **kwargs)
 
@@ -428,13 +439,9 @@ class TestCompanyNetwork:
         assert len(company_network) == 1334
         assert len(caplog.records) == 4
 
-    def test_mock_basic_board(self, requests_mock, caplog):
+    def test_mock_basic_board(self, requests_mock, test_mock_api_get, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
-        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
-                          json=PUNCHDRUNK_JSON)
-        requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=PUNCHDRUNK_OFFICERS_JSON)
-        company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
+        company_network = test_mock_api_get(requests_mock)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
         assert len(company_network) == 3
@@ -444,14 +451,11 @@ class TestCompanyNetwork:
         basic_officer_tests(company_network)
         assert caplog.records == []
 
-    def test_mock_only_active_board(self, requests_mock, caplog):
+    def test_mock_only_active_board(self, requests_mock, test_mock_api_get,
+                                    caplog):
         """Test filtering out board_members so only active included."""
-        requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
-                          json=PUNCHDRUNK_JSON)
-        requests_mock.get(company_officers_url(PUNCHDRUNK_COMPANY_ID),
-                          json=PUNCHDRUNK_OFFICERS_JSON)
-        company_network = get_company_network(
-                PUNCHDRUNK_COMPANY_ID, exclude_resigned_board_members=True)
+        company_network = test_mock_api_get(
+                requests_mock, exclude_resigned_board_members=True)
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
         assert len(company_network) == 2
