@@ -140,7 +140,6 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
 def get_company_network(company_number: CompanyIDType = '04547069',
                         branches: int = 0,
                         include_significant_controllers: bool = False,
-                        enforce_missing_ties: bool = False,
                         include_officers: bool = True,
                         include_edge_data: bool = False,
                         **kwargs) -> Optional[Graph]:
@@ -156,19 +155,18 @@ def get_company_network(company_number: CompanyIDType = '04547069',
             sampling from board members to other companies they set on
         include_significant_controllers (bool): Whether to also follow
             significant controllers as another type of board member
-        enforce_missing_ties (bool): Whether to add ties in cases where there
-            is a record of a board membership in `get_officer_appointments`
-            that doesn't appear in that company's `get_company_officers` query.
         include_officers (bool): Include officers in network queries.
         include_edge_data (bool): Include JSON data from
             `get_officer_appointments` as a `data` attribute for edges.
         params (dict): Dictionary of usually optional parameters for search
         **kwargs: Additional parameters to send to api calls.
 
-            exclude_non_active_companies (bool) is passed to `get_company`.
+            exclude_non_active_companies (bool) is for `get_company`.
 
-            exclude_resigned_board_members (bool) is passed to
+            exclude_resigned_board_members (bool) is for
             `get_company_officers`.
+
+            enforce_missing_ties (bool) is for `_get_network_branches`.
 
     Returns:
         Graph: A bipartite NetworkX `Graph` where bipartite is 0 for
@@ -182,6 +180,8 @@ def get_company_network(company_number: CompanyIDType = '04547069',
         * Refactor todo info into documentation
         * Add option of including network collected prior to error
         * Add options for include_significant_controllers
+        * Consider enforcing inclusion of data in edges
+        * Consider means of caching queries to avoid duplicates
     """
     g = Graph()
     logger.debug(f'Querying board network from {company_number}')
@@ -196,7 +196,7 @@ def get_company_network(company_number: CompanyIDType = '04547069',
         for officer_id, officer_data in officers:
             g.add_node(officer_id, name=officer_data['name'], bipartite=1,
                        data=officer_data)
-            g.add_edge(company_number, officer_id)
+            # g.add_edge(company_number, officer_id)
             if branches or include_edge_data:
                 appointments = {related_company_id: appointment_data
                                 for related_company_id, appointment_data in
@@ -206,40 +206,96 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                                     company_number=company_number,
                                     officer_data=officer_data)}
             if include_edge_data:
+                # consider poping key from appointments to avoid excess loop
+                try:
+                    appointment_data = appointments[company_number]
+                except KeyError:
+                    logger.warning('No appointment_data available for '
+                                   f'officer {officer_data["name"]} '
+                                   f'({officer_id})')
+                    appointment_data = None
+                officer_edge_data = {
+                    'appointment_data': appointment_data,
+                    'officer_data': officer_data}   # Currently a duplicate of
+                                                    # officer node data
                 g.add_edge(company_number, officer_id,
-                           data=appointments.pop(company_number))
+                           data=officer_edge_data)
             else:
                 g.add_edge(company_number, officer_id)
             if branches:
-                for related_company_id in appointments:
-                    if related_company_id not in g.nodes:
-                        related_network = get_company_network(
-                            related_company_id, branches=branches - 1)
-                        if related_network:
-                            g = compose(g, related_network)
-                            assert is_bipartite(g)
-                            if not is_connected(g) and enforce_missing_ties:
-                                if include_edge_data:
-                                    g.add_edge(related_company_id, officer_id,
-                                               data=appointments[
-                                                   related_company_id])
-                                else:
-                                    g.add_edge(related_company_id, officer_id)
-                        else:
-                            logger.warning("Skipping company "
-                                           f"{related_company_id} "
-                                           "from board member "
-                                           f"{officer_data['name']} "
-                                           f"({officer_id}) of company "
-                                           f"{company['company_name']} "
-                                           f"({company_number})")
+                g = _get_network_branches(g, officer_id,
+                                          appointments,
+                                          branches=branches,
+                                          root_company_id=company_number,
+                                          root_company_data=company,
+                                          **kwargs)
     return g
 
 
-# def get_network_branches(officer_id: str,
-#                          officer_data: JSONDict,
-#                          company_number: str,
-#                          company: JSONDict) -> Optional[Graph]:
+def _get_network_branches(g: Graph,
+                          officer_id: str,
+                          appointments: Dict[str, JSONDict],
+                          root_company_id: CompanyIDType,
+                          root_company_data: JSONDict,
+                          # Argument ordering hopefully refactorable
+                          branches: int = 0,
+                          enforce_missing_ties: bool = False,
+                          include_edge_data: bool = True,
+                          **kwargs) -> Optional[Graph]:
+    """
+    Recursively expand network through individuals on multiple boards.
+
+    Args:
+        g (Graph): A graph meant to have at least one company.
+        appointments (dict): Dictionary of company_id keys to appointment data.
+        branches (int): Number of branches to follow.
+        enforce_missing_ties (bool): Whether to add ties in cases where there
+            is a record of a board membership in `get_officer_appointments`
+            that doesn't appear in that company's `get_company_officers` query.
+        include_edge_data (bool): Include JSON data from
+            `get_officer_appointments` as a `data` attribute for edges.
+        root_company_id (CompanyIDType): int or str of root `company_id` branch
+            may connect to
+        root_company_data (JSONDict): A dict of data on company branch may
+            connect to
+        **kwargs: Parameters to send to further calls of `get_company_network`.
+
+    Returns:
+        Graph: A bipartite NetworkX `Graph` where bipartite is 0 for
+               companies and 1 for board members.
+
+    Todo:
+        * Expect abstract refactoring to also work with
+          `significant_controllers`
+        * Consider refactor to always include edge data
+        * Consider means of caching queries to avoid duplicates
+    """
+    for related_company_id in appointments:
+        if related_company_id not in g.nodes:
+            related_network = get_company_network(
+                related_company_id,
+                branches=branches - 1,
+                enforce_missing_ties=enforce_missing_ties,
+                include_edge_data=include_edge_data,
+                **kwargs)
+            if related_network:
+                g = compose(g, related_network)
+                assert is_bipartite(g)
+                if not is_connected(g) and enforce_missing_ties:
+                    if include_edge_data:
+                        g.add_edge(related_company_id, officer_id,
+                                   data=appointments[related_company_id])
+                    else:
+                        g.add_edge(related_company_id, officer_id)
+            else:
+                logger.warning("Skipping company "
+                               f"{related_company_id} "
+                               "from board member "
+                               f"{g.nodes['officer_id']['name']} "
+                               f"({officer_id}) of company "
+                               f"{root_company_data['company_name']} "
+                               f"({root_company_id})")
+    return g
 #     for related_company_id, appointment_data in get_officer_appointments(
 #             officer_id,
 #             officer_data=officer_data,
@@ -290,7 +346,7 @@ def get_company(company_number: CompanyIDType = '04547069',
 
 def get_company_officers(company_number: CompanyIDType = '04547069',
                          exclude_resigned_board_members: bool = False,
-                         ) -> JSONItemsGenerator:
+                         **kwargs) -> JSONItemsGenerator:
     """Yield officer_id and officer data for from company_number's board."""
     officers_query = companies_house_query(
             f'/company/{company_number}/officers')

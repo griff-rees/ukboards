@@ -303,6 +303,27 @@ APPOINTMENTS_4 = {
     ]
 }
 
+NO_APPOINTMENT_WARNING_PREFIX = "No appointment_data available for officer "
+
+BARBICAN_ONE_HOP_LOGS = [
+     NO_APPOINTMENT_WARNING_PREFIX + message for message in [
+        "TEMPLE SECRETARIES LIMITED (xLPL0PBzn14BtfuhzOZQswj4AoM)",
+        "COMPANY DIRECTORS LIMITED (C7trUnW0xAvzpaSmVXVviwNi2BY)",
+        "EVERSECRETARY LIMITED (eEJrTGmaO7RN-o4rvN5axXc7Qow)",
+        "PLATT, Harry (5YFtE08gN05EgIGUsdkLyVtaq8w)",
+        "EVERDIRECTOR LIMITED (tnCVFpT40tQy4g6fPSRNw6mZjfg)",
+        "WOOLLEY, Michael John (ynPDNO7Kgm8iTPuVjxqDG-XHLgc)",
+        "DURRANCE, Philip Walter (PPCTh_XqAsV9jxJeT1tayO1c2gI)",
+        "PARSONS, Justine Victoria (VwRA0DyNqXMShqXSa9C_WAGBTAw)",
+        "SAUNDERS, Ian William (AwFg2zLGfRr4l8QKpk1QIQUOXmk)"]
+]
+
+
+def barbican_one_hop_caplog_tests(caplog):
+    for i, message in enumerate(m for m in caplog.messages if
+                                m.startswith(NO_APPOINTMENT_WARNING_PREFIX)):
+        assert BARBICAN_ONE_HOP_LOGS[i] == message
+
 
 @pytest.fixture
 def test_mock_api_get() -> Callable:
@@ -332,7 +353,7 @@ def test_mock_api_get() -> Callable:
                           json=APPOINTMENTS_2)
         requests_mock.get(officer_appointments_url(OFFICER_3_ID),
                           json=APPOINTMENTS_3)
-        requests_mock.get(officer_appointments_url(OFFICER_3_ID),
+        requests_mock.get(officer_appointments_url(OFFICER_4_ID),
                           json=APPOINTMENTS_4)
 
         return get_company_network(company_number, **kwargs)
@@ -404,7 +425,7 @@ class TestCompanyNetwork:
         for officer_id in OFFICER_1_ID, OFFICER_2_ID, OFFICER_3_ID:
             assert officer_id in barbican_theatre_net
             assert officer_id not in shared_experience_net
-        assert caplog.records == []
+        barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
@@ -425,7 +446,7 @@ class TestCompanyNetwork:
         assert OFFICER_3_ID in shared_experience_board
         assert not {OFFICER_1_ID, OFFICER_2_ID} < shared_experience_board
         assert {OFFICER_2_ID, OFFICER_3_ID} < barbican_theatre_board
-        assert caplog.records == []
+        barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
