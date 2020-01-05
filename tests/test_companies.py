@@ -21,10 +21,12 @@ from uk_boards.companies import (stringify_company_number,
                                  get_company_network,
                                  is_inactive_board_member,
                                  filter_active_board_members,
+                                 CompanyNetworkClient,
                                  CompaniesHousePermissionError,
                                  CompanyIDType,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_URL)
+from uk_boards.uk_boards import NegativeIntBranchException
 from uk_boards.utils import (get_external_ip_address,
                              InternetConnectionError,
                              CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
@@ -390,7 +392,7 @@ def test_filter_active_board(requests_mock, test_mock_api_get, caplog) -> None:
     assert caplog.records == []
 
 
-class TestCompanyNetwork:
+class TestGetCompanyNetwork:
 
     """Test constructing company networks."""
 
@@ -540,3 +542,61 @@ class TestCompanyNetwork:
         assert not {OFFICER_1_ID, OFFICER_2_ID} < shared_experience_board
         assert {OFFICER_2_ID, OFFICER_3_ID} == barbican_theatre_board
         assert caplog.records == []
+
+
+def basic_client_officer_tests(company_network: Graph) -> None:
+    """Fixture for pattern of officer tests."""
+    officer_1_edge = company_network.edges[OFFICER_1_ID,
+                                           PUNCHDRUNK_COMPANY_ID]
+    assert officer_1_edge['data']['appointed_on'] == '2016-09-06'
+    assert 'resigned_on' not in officer_1_edge['data']
+    officer_2_edge = company_network.edges[OFFICER_2_ID,
+                                           PUNCHDRUNK_COMPANY_ID]
+    assert officer_2_edge['data']['appointed_on'] == '2010-07-19'
+    assert officer_2_edge['data']['resigned_on'] == '2018-10-08'
+
+
+class TestCompanyNetwork:
+
+    """Test use of CompanyNetwork class to manage data queries."""
+
+    def test_negative_branches_error(self, caplog):
+        """Test raising NegativeIntBranchException on __init__."""
+        with pytest.raises(NegativeIntBranchException) as excinfo:
+            CompanyNetworkClient(branches=-1)
+        assert str(excinfo.value) == ("-1 is an invalid number of network "
+                                      "branches. It must be an int and > 0.")
+
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_client_basic_board(self, caplog):
+        """Test a simple query of PUNCHDRUNK and all board members"""
+        cn_client = CompanyNetworkClient(enforce_missing_ties=True)
+        company_network = cn_client.get_network(PUNCHDRUNK_COMPANY_ID)
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+        assert len(company_network) == 34
+        assert is_connected(company_network)
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 33
+        basic_client_officer_tests(company_network)
+        assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_client_1_branch_board_disconnected(self, caplog):
+        """1 branch of Barbican Theatre Company with added missing link."""
+        cn_client = CompanyNetworkClient(branches=1, enforce_missing_ties=True)
+        company_network = cn_client.get_network(BARBICAN_THEATRE_COMPANY_ID)
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 367
+        assert not is_connected(company_network)
+        barbican_theatre_net, shared_experience_net = connected_components(
+            company_network)
+        assert len(shared_experience_net) == 35
+        assert len(barbican_theatre_net) == 332
+        for officer_id in OFFICER_1_ID, OFFICER_2_ID, OFFICER_3_ID:
+            assert officer_id in barbican_theatre_net
+            assert officer_id not in shared_experience_net
+        barbican_one_hop_caplog_tests(caplog)

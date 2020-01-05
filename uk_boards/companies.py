@@ -15,6 +15,7 @@ from networkx import Graph, compose, is_bipartite, is_connected
 import requests
 from requests.exceptions import ConnectionError
 
+from .uk_boards import Error, NegativeIntBranchException
 from .utils import (InternetConnectionError, get_external_ip_address,
                     DEFAULT_API_KEY_PATH)
 
@@ -105,7 +106,7 @@ def companies_house_query(query: str,
             f"{url_prefix + query}")
 
 
-class CompaniesHousePermissionError(Exception):
+class CompaniesHousePermissionError(Error):
 
     """An exception for handling 403 forbidden errors."""
 
@@ -135,6 +136,124 @@ def stringify_company_number(company_number: Union[int, str]) -> str:
     if len(company_number) < 8:
         return company_number.rjust(8, '0')  # Shorter need preceeding '0's
     return company_number
+
+
+class CompanyNetworkClient:
+
+    """Recursively construct a network of companies and board members."""
+
+    def __init__(self,
+                 branches: int = 0,
+                 include_significant_controllers: bool = False,
+                 include_officers: bool = True,
+                 include_edge_data: bool = False,
+                 enforce_missing_ties: bool = True,
+                 exclude_non_active_companies: bool = False,
+                 exclude_resigned_board_members: bool = False,
+                 ) -> None:
+        if type(branches) is int and branches >= 0:
+            self.branches = branches
+        else:
+            raise NegativeIntBranchException(branches)
+        self.include_significant_controllers = include_significant_controllers
+        self.include_officers = include_officers
+        self.include_edge_data = include_edge_data
+        self.enforce_missing_ties = enforce_missing_ties
+        self.exclude_non_active_companies = exclude_non_active_companies
+        self.exclude_resigned_board_members = exclude_resigned_board_members
+        self._root_company_id = None
+        self._graph = Graph()
+        self._officer_appointments_cache = {}
+
+    def get_network(self,
+                    root_company_id: CompanyIDType = '04547069',) -> Graph:
+        """Construct a board interlock network using the NetworkX library."""
+        if not len(self._graph):
+            self._root_company_id = root_company_id
+            self._get_network()
+        return self._graph
+
+    def _get_officer_name(self,
+                          officer_id: str,
+                          company_id: str = None,
+                          board_data: JSONDict = None) -> str:
+        """
+        Get officer name from appointments list or company relationship.
+
+        If a `company_id` is passed then attempt to return the name entry in
+        the `_officer_appointments_cache`. If a KeyError, try to return the
+        name listed in the relative companies officers list.
+
+        Finally: if no company_id is provided then return the first name listed
+        in contracts in the `_officer_appointments_cache`.
+
+        Todo:
+            * Add a method to take advantage of `"name_elements"`
+        """
+        if company_id and board_data:
+            try:
+                return self._officer_appointments_cache[officer_id][
+                        company_id]['name']
+            except KeyError:
+                logger.warning('No appointment_data available for '
+                               f'officer {board_data["name"]} '
+                               f'({officer_id})')
+            else:
+                return board_data['name']
+        else:
+            for appointment in self._graph.nodes[officer_id]['data']['items']:
+                return appointment['name']
+
+    def _add_officer(self, officer_id: str, company_id: str,
+                     officer_board_data: JSONDict) -> None:
+        appointments_data = get_officer_appointments_data(officer_id)
+        self._officer_appointments_cache[officer_id] = {
+            appointment['appointed_to']['company_number']: appointment
+            for appointment in appointments_data['items']
+            }
+        name = self._get_officer_name(officer_id, company_id,
+                                      officer_board_data)
+        self._graph.add_node(officer_id, name=name, bipartite=1,
+                             data=appointments_data)
+
+    def _get_network(self,
+                     company_id: str = None,
+                     branch_iteration: int = 0) -> None:
+        company_id = company_id or self._root_company_id
+        if company_id == self._root_company_id:
+            self._query_start = datetime.now()
+        logger.debug(f'Querying board network from {company_id}')
+        company_data = get_company(company_id)
+        if not company_data:
+            return None
+        logger.debug(company_data['company_name'])
+        self._graph.add_node(company_id, name=company_data['company_name'],
+                             bipartite=0, data=company_data)
+        if self.include_officers:
+            officers = get_company_officers(company_id)
+            for officer_id, officer_board_data in officers:
+                if officer_id not in self._graph.nodes:
+                    self._add_officer(officer_id, company_id,
+                                      officer_board_data)
+                self._graph.add_edge(company_id, officer_id,
+                                     data=officer_board_data)
+                if 0 <= branch_iteration < self.branches:
+                    self._get_network_branches(officer_id,
+                                               branch_iteration + 1)
+                elif branch_iteration < 0:
+                    raise NegativeIntBranchException(branch_iteration)
+        if company_id == self._root_company_id:
+            self._query_end = datetime.now()
+
+    def _get_network_branches(self,
+                              person_id: str,
+                              branch_iteration: int,
+                              cache_name: str = '_officer_appointments_cache'):
+        if not hasattr(self, cache_name):
+            raise KeyError(f"{cache_name} not set so cannot add that branch")
+        for related_company_id in getattr(self, cache_name)[person_id]:
+            if related_company_id not in self._graph.nodes:
+                self._get_network(related_company_id, branch_iteration + 1)
 
 
 def get_company_network(company_number: CompanyIDType = '04547069',
@@ -196,7 +315,6 @@ def get_company_network(company_number: CompanyIDType = '04547069',
         for officer_id, officer_data in officers:
             g.add_node(officer_id, name=officer_data['name'], bipartite=1,
                        data=officer_data)
-            # g.add_edge(company_number, officer_id)
             if branches or include_edge_data:
                 appointments = {related_company_id: appointment_data
                                 for related_company_id, appointment_data in
@@ -216,8 +334,8 @@ def get_company_network(company_number: CompanyIDType = '04547069',
                     appointment_data = None
                 officer_edge_data = {
                     'appointment_data': appointment_data,
-                    'officer_data': officer_data}   # Currently a duplicate of
-                                                    # officer node data
+                    # 'officer_data is a duplicate of officer node data
+                    'officer_data': officer_data}
                 g.add_edge(company_number, officer_id,
                            data=officer_edge_data)
             else:
@@ -296,35 +414,6 @@ def _get_network_branches(g: Graph,
                                f"{root_company_data['company_name']} "
                                f"({root_company_id})")
     return g
-#     for related_company_id, appointment_data in get_officer_appointments(
-#             officer_id,
-#             officer_data=officer_data,
-#             company_number=company_number
-#             company=company):
-#         if (include_edge_data and related_company_id == company_number):
-#             g[company_number][officer_id]['data'] = appointment_data
-#             if not branches:
-#                 break
-#         elif related_company_id not in g.nodes:
-#             related_network = get_company_network(
-#                 related_company_id, branches=branches - 1)
-#             if related_network:
-#                 g = compose(g, related_network)
-#                 assert is_bipartite(g)
-#                 if not is_connected(g) and enforce_missing_ties:
-#                     if include_edge_data:
-#                         g.add_edge(related_company_id, officer_id,
-#                                    data=appointment_data)
-#                     else:
-#                         g.add_edge(related_company_id, officer_id)
-#             else:
-#                 logger.warning("Skipping company "
-#                                f"{related_company_id} "
-#                                "from board member "
-#                                f"{officer_data['name']} "
-#                                f"({officer_id}) of company "
-#                                f"{company['company_name']} "
-#                                f"({company_number})")
 
 
 def get_company(company_number: CompanyIDType = '04547069',
@@ -365,8 +454,16 @@ def get_company_officers(company_number: CompanyIDType = '04547069',
         yield officer_id, officer
 
 
-def get_officer_appointments(officer_id: str, **kwargs) -> JSONItemsGenerator:
+def get_officer_appointments(officer_id: str,
+                             **kwargs) -> JSONItemsGenerator:
     """Query officer appointments and yield company_id, appointment_data."""
+    appointments = get_officer_appointments_data(officer_id, **kwargs)
+    for appointment in appointments['items']:
+        yield appointment['appointed_to']['company_number'], appointment
+
+
+def get_officer_appointments_data(officer_id: str,
+                                  **kwargs) -> JSONDict:
     appointments = companies_house_query(
             f'/officers/{officer_id}/appointments')
     if not appointments:
@@ -383,8 +480,7 @@ def get_officer_appointments(officer_id: str, **kwargs) -> JSONItemsGenerator:
                          f"member {officer_id}")
         # Worth considering saving error here
         return None
-    for appointment in appointments['items']:
-        yield appointment['appointed_to']['company_number'], appointment
+    return appointments
 
 
 def is_inactive_board_member(officer: dict) -> bool:
