@@ -3,14 +3,14 @@ History
 =======
 
 0.3.0 (2019-12-18)
------------------
+------------------
 
 * Add Charity Commission API querying via zeep library 
 * Include Charity Commision API specification
 * Refactor command line interface
 
 0.2.0 (2019-11-18)
------------------
+------------------
 
 * First use of bump2version
 
@@ -32,6 +32,7 @@ History
 
 0.1.1 (2019-11-13)
 ------------------
+
 * Improve function and variable names
 * Expand docstring of companies_house_query
 * Expand type hinting

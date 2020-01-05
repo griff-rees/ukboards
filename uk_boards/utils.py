@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
+
 import requests
 from requests.exceptions import ConnectionError
 
+
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
-DEFAULT_API_KEY_PATH = '.env'
+DEFAULT_API_KEY_PATH = Path('.env')
 
 
 class InternetConnectionError(Exception):
