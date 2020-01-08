@@ -147,9 +147,10 @@ class CompanyNetworkClient:
                  include_significant_controllers: bool = False,
                  include_officers: bool = True,
                  include_edge_data: bool = False,
-                 enforce_missing_ties: bool = True,
+                 enforce_missing_ties: bool = False,
                  exclude_non_active_companies: bool = False,
                  exclude_resigned_board_members: bool = False,
+                 compose_queried_networks: bool = False,
                  ) -> None:
         if type(branches) is int and branches >= 0:
             self.branches = branches
@@ -161,15 +162,46 @@ class CompanyNetworkClient:
         self.enforce_missing_ties = enforce_missing_ties
         self.exclude_non_active_companies = exclude_non_active_companies
         self.exclude_resigned_board_members = exclude_resigned_board_members
+        self.compose_queried_networks = compose_queried_networks
         self._root_company_id = None
         self._graph = Graph()
         self._officer_appointments_cache = {}
+        self._run_configs = []
+
+    @property
+    def _parameter_state(self) -> Dict[str, Union[int, bool]]:
+        """Return the state of the parameters passable to __init__."""
+        return {varname: getattr(self, varname)
+                for varname in self.__init__.__code__.co_varnames
+                if varname != 'self'}
+
+    @property
+    def _root_node_ids(self) -> tuple:
+        """Return a tuple of root nodes from previous queries."""
+        return (config['root_company_id'] for config in self._run_configs)
 
     def get_network(self,
                     root_company_id: CompanyIDType = '04547069',) -> Graph:
         """Construct a board interlock network using the NetworkX library."""
+        self._run_configs.append({'root_company_id': root_company_id,
+                                  'start_time': datetime.now(),
+                                  'end_time': None,
+                                  # 'logs': [],
+                                  'company_ids': {},
+                                  'parameter_state': self._parameter_state,
+                                  })
+        if len(self._run_configs) > 1 and (
+                self._run_configs[-1]['parameter_state'] !=
+                self._run_configs[-2]['parameter_state']):
+            logger.warning("Query parameters differ between "
+                           f"{self._run_configs[-1]} "
+                           f"and {self._run_configs[-1]}")
         if not len(self._graph):
+            # It is crucial to change here rather than pass to _get_network()
             self._root_company_id = root_company_id
+            if not self.compose_queried_networks:
+                self._graph = Graph()
+                self._officer_appointments_cache = {}
             self._get_network()
         return self._graph
 
@@ -223,14 +255,17 @@ class CompanyNetworkClient:
         if company_id == self._root_company_id:
             self._query_start = datetime.now()
         logger.debug(f'Querying board network from {company_id}')
-        company_data = get_company(company_id)
+        company_data = get_company(
+            company_id,
+            exclude_non_active_companies=self.exclude_non_active_companies)
         if not company_data:
             return None
         logger.debug(company_data['company_name'])
         self._graph.add_node(company_id, name=company_data['company_name'],
                              bipartite=0, data=company_data)
         if self.include_officers:
-            officers = get_company_officers(company_id)
+            officers = get_company_officers(
+                    company_id, self.exclude_resigned_board_members)
             for officer_id, officer_board_data in officers:
                 if officer_id not in self._graph.nodes:
                     self._add_officer(officer_id, company_id,
@@ -254,6 +289,9 @@ class CompanyNetworkClient:
         for related_company_id in getattr(self, cache_name)[person_id]:
             if related_company_id not in self._graph.nodes:
                 self._get_network(related_company_id, branch_iteration + 1)
+                if self.enforce_missing_ties:
+                    self._graph.add_edge(person_id, related_company_id,
+                                         data=None)
 
 
 def get_company_network(company_number: CompanyIDType = '04547069',
