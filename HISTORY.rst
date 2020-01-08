@@ -2,6 +2,12 @@
 History
 =======
 
+0.4.0 (2020-01-07)
+------------------
+
+* Refactor Companies House queries into separate query functions
+* Add a CompanyNetworkClient class for cacheable network queries
+
 0.3.0 (2019-12-18)
 ------------------
 
