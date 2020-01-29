@@ -14,11 +14,15 @@ UK Boards
         :alt: Documentation Status
 
 .. image:: https://pyup.io/repos/github/spool/uk_boards/shield.svg
-     :target: https://pyup.io/repos/github/spool/uk_boards/
-     :alt: Updates
+        :target: https://pyup.io/repos/github/spool/uk_boards/
+        :alt: Updates
+
+.. image:: https://img.shields.io/pypi/pyversions/uk_boards.svg
+        :target: https://img.shields.io/pypi/pyversions/uk_boards
+        :alt: Supported Python Versions
 
 .. image:: https://codecov.io/gh/spool/uk_boards/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/spool/uk_boards
+        :target: https://codecov.io/gh/spool/uk_boards
 
 
 Query UK company and charity board networks.

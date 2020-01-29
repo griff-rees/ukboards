@@ -789,7 +789,8 @@ def test_get_significant_controllers(caplog):
     for i, controller in enumerate(significant_controllers_data['items']):
         for key, value in BARBICAN_SIGNIFICANT_CONTROLLERS_DATA['items'
                                                                 ][i].items():
-            # Fake names and excess ceases added for other tests
+            # Fake names and an exable `'ceases`` attr added for other tests
+            # so skipping those here
             if key not in ['name', COMPANIES_HOUSE_CEASED_KEYWORD]:
                 assert controller[key] == value
     assert caplog.records == []
