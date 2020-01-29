@@ -61,14 +61,14 @@ skip_if_not_allowed_ip = pytest.mark.skipif(
 )
 
 
-def company_url(company_number: str) -> str:
+def company_url(company_id: str) -> str:
     return (COMPANIES_HOUSE_URL + '/company/' +
-            stringify_company_id(company_number))
+            stringify_company_id(company_id))
 
 
-def company_officers_url(company_number: str) -> str:
+def company_officers_url(company_id: str) -> str:
     return (COMPANIES_HOUSE_URL + '/company/' +
-            stringify_company_id(company_number) + '/officers')
+            stringify_company_id(company_id) + '/officers')
 
 
 def officer_appointments_url(officer_id: str) -> str:
@@ -105,13 +105,13 @@ class TestCorrectCompanyNumber:
 
     CORRECT_COMPANY_ID = '00877987'
 
-    def test_short_company_number_as_int(self):
+    def test_short_company_id_as_int(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = 877987
         assert (stringify_company_id(TEST_COMPANY_ID) ==
                 self.CORRECT_COMPANY_ID)
 
-    def test_short_company_number_as_str(self):
+    def test_short_company_id_as_str(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = '877987'
         assert (stringify_company_id(TEST_COMPANY_ID) ==
@@ -171,9 +171,9 @@ class TestBasicQueries:
             'Status code 404 from /company/00605459',
             'Skipping /company/00605459'
         ]
-        test_company_number = '00605459'
-        requests_mock.get(company_url(test_company_number), status_code=404)
-        output = companies_house_query('/company/' + test_company_number,
+        test_company_id = '00605459'
+        requests_mock.get(company_url(test_company_id), status_code=404)
+        output = companies_house_query('/company/' + test_company_id,
                                        max_trials=1, sleep_time=1)
         assert output is None
         assert [rec.message for rec in caplog.records] == correct_log_output
@@ -414,7 +414,7 @@ def test_mock_caplogs(caplog,
 def test_mock_api_get() -> Callable:
 
     def test_mock_api(requests_mock,
-                      company_number: CompanyIDType = PUNCHDRUNK_COMPANY_ID,
+                      company_id: CompanyIDType = PUNCHDRUNK_COMPANY_ID,
                       **kwargs) -> Graph:
 
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
@@ -441,7 +441,7 @@ def test_mock_api_get() -> Callable:
         requests_mock.get(officer_appointments_url(OFFICER_3_ID),
                           json=APPOINTMENTS_3)
 
-        return get_company_network(company_number, **kwargs)
+        return get_company_network(company_id, **kwargs)
 
     return test_mock_api
 
@@ -710,7 +710,7 @@ BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2 = {
 def test_mock_api_class_get() -> Callable:
 
     def test_mock_api(requests_mock,
-                      company_number: CompanyIDType = PUNCHDRUNK_COMPANY_ID,
+                      company_id: CompanyIDType = PUNCHDRUNK_COMPANY_ID,
                       **kwargs) -> Graph:
 
         requests_mock.get(company_url(PUNCHDRUNK_COMPANY_ID),
@@ -754,7 +754,7 @@ def test_mock_api_class_get() -> Callable:
             json=BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2)
 
         cn_client = CompanyNetworkClient(**kwargs)
-        return cn_client, cn_client.get_network(company_number)
+        return cn_client, cn_client.get_network(company_id)
 
     return test_mock_api
 
