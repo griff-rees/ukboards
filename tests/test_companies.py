@@ -16,15 +16,18 @@ import os
 
 from typing import Callable, Sequence, Union
 
-from uk_boards.companies import (stringify_company_number,
+from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
                                  get_company_network,
-                                 is_inactive_board_member,
+                                 get_kinds_ids_dict,
+                                 is_inactive,
                                  filter_active_board_members,
+                                 get_significant_controllers_data,
                                  CompanyNetworkClient,
                                  CompaniesHousePermissionError,
                                  CompanyIDType,
                                  COMPANIES_HOUSE_API_KEY_NAME,
+                                 COMPANIES_HOUSE_CEASED_KEYWORD,
                                  COMPANIES_HOUSE_URL)
 from uk_boards.uk_boards import NegativeIntBranchException
 from uk_boards.utils import (get_external_ip_address,
@@ -60,16 +63,40 @@ skip_if_not_allowed_ip = pytest.mark.skipif(
 
 def company_url(company_number: str) -> str:
     return (COMPANIES_HOUSE_URL + '/company/' +
-            stringify_company_number(company_number))
+            stringify_company_id(company_number))
 
 
 def company_officers_url(company_number: str) -> str:
     return (COMPANIES_HOUSE_URL + '/company/' +
-            stringify_company_number(company_number) + '/officers')
+            stringify_company_id(company_number) + '/officers')
 
 
 def officer_appointments_url(officer_id: str) -> str:
     return COMPANIES_HOUSE_URL + f'/officers/{officer_id}/appointments'
+
+
+def controllers_endpoint(company_id: str,
+                         category: str = None,
+                         entity_id: str = None) -> str:
+    """Return controllers endpoints."""
+    path: str = f'/company/{company_id}/persons-with-significant-control'
+    if not entity_id and not category:
+        return path
+    elif not entity_id and category:
+        return f'{path}/{category}'
+    else:
+        return f'{path}/{category}/{entity_id}'
+
+
+def controllers_url(company_id: str) -> str:
+    return COMPANIES_HOUSE_URL + controllers_endpoint(company_id)
+
+
+def controllers_individual_url(company_id: str,
+                               individual_id: str = None) -> str:
+    return COMPANIES_HOUSE_URL + controllers_endpoint(company_id,
+                                                      'individual',
+                                                      individual_id)
 
 
 class TestCorrectCompanyNumber:
@@ -81,13 +108,13 @@ class TestCorrectCompanyNumber:
     def test_short_company_number_as_int(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = 877987
-        assert (stringify_company_number(TEST_COMPANY_ID) ==
+        assert (stringify_company_id(TEST_COMPANY_ID) ==
                 self.CORRECT_COMPANY_ID)
 
     def test_short_company_number_as_str(self):
         """Test adding leading zeros for ARNOLFINI GALLERY LTD."""
         TEST_COMPANY_ID = '877987'
-        assert (stringify_company_number(TEST_COMPANY_ID) ==
+        assert (stringify_company_id(TEST_COMPANY_ID) ==
                 self.CORRECT_COMPANY_ID)
 
 
@@ -288,6 +315,7 @@ SHARED_OFFICERS_JSON['items'].append(
          'officer': {
                 'appointments': f'/officers/{OFFICER_3_ID}'}
             }})
+
 del SHARED_OFFICERS_JSON['items'][:2]
 
 APPOINTMENTS_0 = {
@@ -312,7 +340,7 @@ APPOINTMENTS_2 = {
     'items': [
         {'appointed_to': {
             'company_number': BARBICAN_THEATRE_COMPANY_ID
-        }, 'appointed_on': '2015-01-15'},
+        }, 'appointed_on': '2015-01-15',  'name': OFFICER_2_NAME},
         {'appointed_to': {
             'company_number': SHARED_EXPERIENCE_COMPANY_ID
         }, 'resigned_on': '2008-10-16', 'appointed_on': '2002-05-20'}
@@ -327,10 +355,14 @@ APPOINTMENTS_3 = {
     ]
 }
 
-NO_APPOINTMENT_WARNING_PREFIX = "No appointment_data available for officer "
+NO_APPOINTMENT_WARNING_PREFIX = "No 'name' data available for officer "
+NO_APPOINTMENT_WARNING_SUFFIX = " in appointments_cache"
 
+
+# Todo: replace this with ``generate_mock_logs_sequence``
 BARBICAN_ONE_HOP_LOGS = [
-     NO_APPOINTMENT_WARNING_PREFIX + message for message in [
+     (NO_APPOINTMENT_WARNING_PREFIX + message +
+         NO_APPOINTMENT_WARNING_SUFFIX) for message in [
         "TEMPLE SECRETARIES LIMITED (xLPL0PBzn14BtfuhzOZQswj4AoM)",
         "COMPANY DIRECTORS LIMITED (C7trUnW0xAvzpaSmVXVviwNi2BY)",
         "EVERSECRETARY LIMITED (eEJrTGmaO7RN-o4rvN5axXc7Qow)",
@@ -350,25 +382,31 @@ def barbican_one_hop_caplog_tests(caplog) -> None:
 
 
 def generate_mock_logs_sequence(
-        officer_log_sequence: Union[int, Sequence[int]] = (0, 1)
+        officer_log_sequence: Union[int, Sequence[int]] = (0, 1),
+        log_prefix: str = NO_APPOINTMENT_WARNING_PREFIX,
+        log_suffix: str = NO_APPOINTMENT_WARNING_SUFFIX
         ) -> Sequence[str]:
     """Generate a sequence of mock logs for testing."""
     if type(officer_log_sequence) is int:
         officer_log_sequence = {officer_log_sequence}
     return [
-        NO_APPOINTMENT_WARNING_PREFIX + message for message in [
+        (log_prefix + message + log_suffix) for message in [
             f"{OFFICER_NAMES[i]} ({OFFICER_IDS[i]})"
             for i in officer_log_sequence]
     ]
 
 
 def test_mock_caplogs(caplog,
-                      officer_log_sequence: Union[int, Sequence[int]] = (0, 1)
+                      officer_log_sequence: Union[int, Sequence[int]] = (0, 1),
+                      log_prefix: str = NO_APPOINTMENT_WARNING_PREFIX,
+                      log_suffix: str = NO_APPOINTMENT_WARNING_SUFFIX
                       ) -> None:
     """Generate a mock series of assertion for testing mock logs."""
-    correct_logs: list = generate_mock_logs_sequence(officer_log_sequence)
+    correct_logs: list = generate_mock_logs_sequence(officer_log_sequence,
+                                                     log_prefix, log_suffix)
     for i, message in enumerate(m for m in caplog.messages if
-                                m.startswith(NO_APPOINTMENT_WARNING_PREFIX)):
+                                m.startswith(log_prefix) and
+                                m.endswith(log_suffix)):
         assert correct_logs[i] == message
 
 
@@ -420,9 +458,9 @@ def basic_officer_tests(company_network: Graph) -> None:
 
 def test_is_inactive_board_member() -> None:
     """Test iterating over one active and one inactive."""
-    is_inactive = [is_inactive_board_member(officer) for officer in
-                   PUNCHDRUNK_OFFICERS_JSON['items']]
-    assert [False, True] == is_inactive
+    is_inactive_officers = [is_inactive(officer) for officer in
+                            PUNCHDRUNK_OFFICERS_JSON['items']]
+    assert [False, True] == is_inactive_officers
 
 
 def test_filter_active_board(requests_mock, test_mock_api_get, caplog) -> None:
@@ -500,7 +538,6 @@ class TestGetCompanyNetwork:
     @pytest.mark.xfail
     def test_0_branch_warning_case(self, caplog):
         """0 branch query old error on company '01086582', needs fix."""
-        assert False
         company_network = get_company_network('01086582',
                                               branches=1,
                                               enforce_missing_ties=True)
@@ -601,6 +638,74 @@ def basic_client_officer_tests(company_network: Graph) -> None:
     assert officer_1_edge['data']['resigned_on'] == '2018-10-08'
 
 
+BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL = controllers_individual_url(
+        BARBICAN_THEATRE_COMPANY_ID)
+
+CONTROLLER_0_NAME = 'Ms Significant Controller'
+CONTROLLER_0_ID = 'iIDxeq4OAvRa-vdSQU5lXCEh5TQ'
+
+CONTROLLER_1_NAME = 'Another Controller'
+CONTROLLER_1_ID = 'TkYW3qLir7zxRo0jaNsojOcOl_I'
+
+CONTROLLER_2_NAME = 'Controller the Third'
+CONTROLLER_2_ID = 'd5puAXKsb2V1P6SISAt_eScyCmo'
+
+BARBICAN_SIGNIFICANT_CONTROLLERS_DATA = {'items': [
+    {'links': {'self': controllers_endpoint(BARBICAN_THEATRE_COMPANY_ID,
+                                            'individual',
+                                            CONTROLLER_0_ID)},
+     'kind': 'individual-person-with-significant-control',
+     'natures_of_control': ['voting-rights-25-to-50-percent'],
+     'name': CONTROLLER_0_NAME,
+     'notified_on': '2016-04-06'},
+    {'links': {'self': controllers_endpoint(BARBICAN_THEATRE_COMPANY_ID,
+                                            'individual',
+                                            CONTROLLER_1_ID)},
+     'kind': 'individual-person-with-significant-control',
+     'natures_of_control': ['voting-rights-25-to-50-percent'],
+     COMPANIES_HOUSE_CEASED_KEYWORD: '2018-03-13',
+     'name': CONTROLLER_1_NAME,
+     'notified_on': '2016-04-06'},
+    {'links': {'self': controllers_endpoint(BARBICAN_THEATRE_COMPANY_ID,
+                                            'individual',
+                                            CONTROLLER_2_ID)},
+     'kind': 'individual-person-with-significant-control',
+     'natures_of_control': ['voting-rights-25-to-50-percent'],
+     'name': CONTROLLER_2_NAME,
+     'notified_on': '2016-04-06'},
+]}
+
+BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_0 = {
+    'name': CONTROLLER_0_NAME,
+    'natures_of_control': ['voting-rights-25-to-50-percent'],
+    'kind': 'individual-person-with-significant-control',
+    'notified_on': '2016-04-06',
+    'links': {
+        'self': controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                           CONTROLLER_0_ID)}
+}
+
+BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_1 = {
+    'name': CONTROLLER_1_NAME,
+    'natures_of_control': ['voting-rights-25-to-50-percent'],
+    'kind': 'individual-person-with-significant-control',
+    'notified_on': '2016-04-06',
+    'links': {
+        'self': controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                           CONTROLLER_1_ID)}
+}
+
+BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2 = {
+    'name': CONTROLLER_2_NAME,
+    'natures_of_control': ['voting-rights-25-to-50-percent'],
+    'kind': 'individual-person-with-significant-control',
+    'notified_on': '2016-04-06',
+    'links': {
+        'self': controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                           CONTROLLER_2_ID)}
+}
+
+
 @pytest.fixture
 def test_mock_api_class_get() -> Callable:
 
@@ -631,6 +736,23 @@ def test_mock_api_class_get() -> Callable:
                           json=APPOINTMENTS_2)
         requests_mock.get(officer_appointments_url(OFFICER_3_ID),
                           json=APPOINTMENTS_3)
+
+        requests_mock.get(controllers_url(BARBICAN_THEATRE_COMPANY_ID),
+                          json=BARBICAN_SIGNIFICANT_CONTROLLERS_DATA)
+
+        requests_mock.get(
+            controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                       CONTROLLER_0_ID),
+            json=BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_0)
+        requests_mock.get(
+            controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                       CONTROLLER_1_ID),
+            json=BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_1)
+        requests_mock.get(
+            controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
+                                       CONTROLLER_2_ID),
+            json=BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2)
+
         cn_client = CompanyNetworkClient(**kwargs)
         return cn_client, cn_client.get_network(company_number)
 
@@ -656,6 +778,23 @@ def test_1_hop_fixture(caplog):
     return cn_client
 
 
+@pytest.mark.remote_data
+@skip_if_not_allowed_ip
+def test_get_significant_controllers(caplog):
+    """Test querying siginificant controllers of PUNCHDRUNK."""
+    significant_controllers_data = get_significant_controllers_data(
+            BARBICAN_THEATRE_COMPANY_ID)
+    assert len(significant_controllers_data['items']) == 3
+    assert significant_controllers_data['active_count'] == 3
+    for i, controller in enumerate(significant_controllers_data['items']):
+        for key, value in BARBICAN_SIGNIFICANT_CONTROLLERS_DATA['items'
+                                                                ][i].items():
+            # Fake names and excess ceases added for other tests
+            if key not in ['name', COMPANIES_HOUSE_CEASED_KEYWORD]:
+                assert controller[key] == value
+    assert caplog.records == []
+
+
 class TestCompanyNetwork:
 
     """Test use of CompanyNetwork class to manage data queries."""
@@ -679,6 +818,41 @@ class TestCompanyNetwork:
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
         basic_client_officer_tests(company_network)
+        assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_client_basic_board_with_controllers(self, caplog):
+        """Test a simple query of Barbican Theatre board members"""
+        correct_kinds = {'company': 1, 'officer': 4, 'controller': 3}
+        client = CompanyNetworkClient(include_significant_controllers=True)
+        company_network = client.get_network(BARBICAN_THEATRE_COMPANY_ID)
+
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 8
+        assert is_connected(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network)
+        for kind in correct_kinds:
+            assert len(kinds_dict[kind]) == correct_kinds[kind]
+        assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @skip_if_not_allowed_ip
+    def test_client_basic_only_controllers(self, caplog):
+        """Test a simple query of Barbican Theatre board members"""
+        correct_kinds = {'company': 1, 'controller': 3}
+        client = CompanyNetworkClient(include_significant_controllers=True,
+                                      include_officers=False)
+        company_network = client.get_network(BARBICAN_THEATRE_COMPANY_ID)
+
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 4
+        assert is_connected(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network)
+        for kind in correct_kinds:
+            assert len(kinds_dict[kind]) == correct_kinds[kind]
         assert caplog.records == []
 
     @pytest.mark.remote_data
@@ -753,6 +927,22 @@ class TestCompanyNetwork:
         assert OFFICER_1_ID not in company_network.nodes
         test_mock_caplogs(caplog, 0)
 
+    def test_mock_board_and_controllers(self, requests_mock,
+                                        test_mock_api_class_get, caplog):
+        """Test mock query of officers and controllers."""
+        correct_kinds = {'company': 1, 'officer': 2, 'controller': 3}
+        client, company_network = test_mock_api_class_get(
+                requests_mock, BARBICAN_THEATRE_COMPANY_ID,
+                include_significant_controllers=True)
+        assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
+                BARBICAN_THEATRE_COMPANY_NAME)
+        assert len(company_network) == 6
+        assert is_connected(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network)
+        for kind in correct_kinds:
+            assert len(kinds_dict[kind]) == correct_kinds[kind]
+        test_mock_caplogs(caplog, 1)
+
     def test_mock_1_hop(self, requests_mock, test_mock_api_class_get, caplog):
         """Test a mock one hop query."""
         client, company_network = test_mock_api_class_get(requests_mock,
@@ -783,7 +973,7 @@ class TestCompanyNetwork:
         for officer_id in OFFICER_0_ID, OFFICER_1_ID, OFFICER_2_ID:
             assert officer_id in barbican_theatre_net
             assert officer_id not in shared_experience_net
-        test_mock_caplogs(caplog, (1, 0, 2, 3))
+        test_mock_caplogs(caplog, (1, 0, 3))
 
     def test_mock_1_branch_enforce_missing_ties(self, requests_mock,
                                                 test_mock_api_class_get,
@@ -804,4 +994,4 @@ class TestCompanyNetwork:
         assert OFFICER_2_ID in shared_experience_board
         assert not {OFFICER_0_ID, OFFICER_1_ID} < shared_experience_board
         assert {OFFICER_1_ID, OFFICER_2_ID} == barbican_theatre_board
-        test_mock_caplogs(caplog, (1, 0, 2, 3))
+        test_mock_caplogs(caplog, (1, 0, 3))
