@@ -3,11 +3,14 @@
 
 """Tests for `Companies House` quries, companies and board networks."""
 
+import asyncio
+
 from copy import deepcopy
 
 from dotenv import load_dotenv
 
-from networkx import is_connected, connected_components, neighbors, Graph
+from networkx import (is_connected, connected_components, neighbors,
+                      number_connected_components, Graph)
 from networkx.algorithms import bipartite
 
 import pytest
@@ -779,6 +782,103 @@ def test_1_hop_fixture(caplog):
 
 
 @pytest.mark.remote_data
+@pytest.mark.asyncio
+@skip_if_not_allowed_ip
+@pytest.fixture
+async def test_0_hop_composed_network_generator_exclude_inactive(caplog):
+    """Cache a basic 0 hop query filtered on active members and companies."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True,
+                                     exclude_non_active_companies=True,
+                                     exclude_resigned_board_members=True)
+    graphs = [g async for g in cn_client.async_networks_generator(company_ids)]
+    assert tuple(cn_client._root_node_ids) == company_ids
+    assert len(graphs[0]) == 5
+    assert len(graphs[1]) == 16
+    assert number_connected_components(graphs[1]) == 2
+    return cn_client
+
+
+@pytest.mark.remote_data
+@pytest.mark.asyncio
+@skip_if_not_allowed_ip
+async def test_0_hop_composed_network_generator(caplog):
+    """Cache a basic 0 hop query and cache for related tests."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True)
+    graphs = [g async for g in cn_client.async_networks_generator(company_ids)]
+    assert tuple(cn_client._root_node_ids) == company_ids
+    assert len(graphs[0]) == 5
+    assert len(graphs[1]) == 38
+    assert number_connected_components(graphs[1]) == 1
+    assert cn_client._runs[1]['connected_components_count'] == 1
+
+
+@pytest.mark.remote_data
+@pytest.mark.asyncio
+@skip_if_not_allowed_ip
+async def test_0_hop_not_composed_network_generator(caplog):
+    """Run a series of uncached 0 hop queries."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient()
+    graphs = [g async for g in cn_client.async_networks_generator(company_ids)]
+    assert len(graphs[0]) == 5
+    assert len(graphs[1]) == 34
+    assert cn_client._runs[0]['kinds_ids_dict']['company'] == {
+            BARBICAN_THEATRE_COMPANY_ID}
+    assert cn_client._runs[1]['kinds_ids_dict']['company'] == {
+            PUNCHDRUNK_COMPANY_ID}
+    assert number_connected_components(graphs[1]) == 1
+
+
+@pytest.mark.remote_data
+@skip_if_not_allowed_ip
+@pytest.fixture
+def async_get_composed_network_fixture(caplog):
+    """Cache a basic 0 hop query filtered on active members and companies."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True,
+                                     exclude_non_active_companies=True,
+                                     exclude_resigned_board_members=True)
+    loop = asyncio.get_event_loop()
+    composed_network = loop.run_until_complete(
+            cn_client.get_composed_network(company_ids))
+    loop.close()
+    return cn_client, composed_network
+
+
+@pytest.mark.remote_data
+@skip_if_not_allowed_ip
+def test_async_get_composed_network(caplog, benchmark):
+    """Cache a basic 0 hop query of active members and companies."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True,
+                                     exclude_non_active_companies=True,
+                                     exclude_resigned_board_members=True)
+
+    @pytest.mark.asyncio
+    @benchmark
+    def test_async_compose(company_ids=company_ids, cn_client=cn_client):
+        cn_client.get_composed_network(company_ids)
+
+    assert len(cn_client._graph) == 16
+    assert caplog.records == []
+
+
+@pytest.mark.remote_data
+@skip_if_not_allowed_ip
+def test_get_composed_network(caplog, benchmark):
+    """Cache a basic 1 hop query of active members and companies."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True,
+                                     exclude_non_active_companies=True,
+                                     exclude_resigned_board_members=True)
+    benchmark(cn_client.get_composed_network, company_ids)
+    assert len(cn_client._graph) == 16
+    assert caplog.records == []
+
+
+@pytest.mark.remote_data
 @skip_if_not_allowed_ip
 def test_get_significant_controllers(caplog):
     """Test querying siginificant controllers of PUNCHDRUNK."""
@@ -789,7 +889,7 @@ def test_get_significant_controllers(caplog):
     for i, controller in enumerate(significant_controllers_data['items']):
         for key, value in BARBICAN_SIGNIFICANT_CONTROLLERS_DATA['items'
                                                                 ][i].items():
-            # Fake names and an exable `'ceases`` attr added for other tests
+            # Fake names and an example ``ceases`` attr added for other tests
             # so skipping those here
             if key not in ['name', COMPANIES_HOUSE_CEASED_KEYWORD]:
                 assert controller[key] == value

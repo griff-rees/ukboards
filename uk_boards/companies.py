@@ -1,21 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from copy import deepcopy
 from datetime import datetime
 import logging
 import os
 import time
 
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Union
+from typing import (Any, AsyncGenerator, Dict, Generator, List, Optional,
+                    Sequence, Tuple, Union)
 
 from dotenv import load_dotenv
 
-from networkx import Graph, compose, is_bipartite, is_connected
+from networkx import (Graph, compose, is_bipartite, is_connected,
+                      number_connected_components)
 
 import requests
 from requests.exceptions import ConnectionError
 
-from .uk_boards import Error, NegativeIntBranchException
+from .uk_boards import Error, NegativeIntBranchException  # aenumerate
 from .utils import (InternetConnectionError, get_external_ip_address,
                     DEFAULT_API_KEY_PATH)
 
@@ -40,6 +43,8 @@ JSONDict = Dict[str, Any]
 CompanyIDType = Union[str, int]
 
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
+
+QueryParameterState = Dict[str, Union[int, bool]]
 
 COMPANY_NETWORK_KINDS = ('company', 'officer', 'controller')
 
@@ -158,6 +163,7 @@ class CompanyNetworkClient:
                  exclude_non_active_companies: bool = False,
                  exclude_resigned_board_members: bool = False,
                  exclude_ceased_controllers: bool = False,
+                 reset_cache: bool = True,
                  compose_queried_networks: bool = False,
                  ) -> None:
         if type(branches) is int and branches >= 0:
@@ -172,58 +178,113 @@ class CompanyNetworkClient:
         self.exclude_resigned_board_members = exclude_resigned_board_members
         self.exclude_ceased_controllers = exclude_ceased_controllers
         self.compose_queried_networks = compose_queried_networks
+
+        # Initiate `` _reset_cache onsistent`` to support
+        # application of ``compose_queries_required`` but worth  leaving
+        # independet in some cases
+        self._reset_cache = not compose_queried_networks
         self._root_company_id = None
         self._graph = Graph()
         self._officer_appointments_cache = {}
-        self._run_configs = []
+        self._runs = []
 
     @property
-    def _parameter_state(self) -> Dict[str, Union[int, bool]]:
+    def reset_cache(self) -> bool:
+        """Return current ``reset_cache`` state."""
+        return self._reset_cache
+
+    @reset_cache.setter
+    def reset_cache(self, value: bool) -> None:
+        """Set ``self._reset_cache`` to value."""
+        self._reset_cache = value
+
+    @property
+    def _parameter_state(self) -> QueryParameterState:
         """Return the state of the parameters passable to __init__."""
         return {varname: getattr(self, varname)
                 for varname in self.__init__.__code__.co_varnames
                 if varname != 'self'}
 
+    @_parameter_state.setter
+    def _parameter_state(self, var: QueryParameterState) -> None:
+        for varname, value in QueryParameterState:
+            setattr(self, varname, value)
+
     @property
     def _root_node_ids(self) -> tuple:
         """Return a tuple of root nodes from previous queries."""
-        return (config['root_company_id'] for config in self._run_configs)
+        return (config['root_company_id'] for config in self._runs)
 
     def get_network(self,
-                    root_company_id: CompanyIDType = '04547069',
-                    reset_cache: bool = True) -> Graph:
+                    root_company_id: CompanyIDType = '04547069') -> Graph:
         """Construct a board interlock network using the NetworkX library.
 
         Todo:
             * Consider adding logs for each run
-            * Consider adding ids for each run to compare what's added
+            * Refactor considering different use cases
         """
-        if reset_cache or not len(self._graph):
-            self._run_configs.append({'root_company_id': root_company_id,
-                                      'start_time': None,
-                                      'end_time': None,
-                                      # 'logs': [],
-                                      'kinds_ids_dict': None,
-                                      'parameter_state': self._parameter_state,
-                                      })
-            if len(self._run_configs) > 1 and (
-                    self._run_configs[-1]['parameter_state'] !=
-                    self._run_configs[-2]['parameter_state']):
+        if (self.reset_cache or not len(self._graph) or
+                self.compose_queried_networks):
+            self._runs.append({'root_company_id': root_company_id,
+                               'start_time': None,
+                               'end_time': None,
+                               # 'logs': [],
+                               'kinds_ids_dict': None,
+                               'parameter_state': self._parameter_state,
+                               'connected_components_count': None,
+                               })
+            if len(self._runs) > 1 and (
+                    self._runs[-1]['parameter_state'] !=
+                    self._runs[-2]['parameter_state']):
                 logger.warning("Query parameters differ between "
-                               f"{self._run_configs[-1]} "
-                               f"and {self._run_configs[-1]}")
+                               f"{self._runs[-1]} "
+                               f"and {self._runs[-1]}")
             # It is crucial to change here rather than pass to _get_network()
             self._root_company_id = root_company_id
-            if not self.compose_queried_networks:
+            if not self.compose_queried_networks or self.reset_cache:
                 self._graph = Graph()
                 self._officer_appointments_cache = {}
             self._get_network()
-            self._run_configs[-1][
-                    'kinds_ids_dict'] = get_kinds_ids_dict(self._graph)
-            self._run_configs[-1]['start_time'] = self._query_start
-            self._run_configs[-1]['end_time'] = self._query_end
+            self._runs[-1]['kinds_ids_dict'] = get_kinds_ids_dict(self._graph)
+            self._runs[-1]['start_time'] = self._query_start
+            self._runs[-1]['end_time'] = self._query_end
+            self._runs[-1]['connected_components_count'] = (
+                    number_connected_components(self._graph)
+                    )
 
-        return self._graph
+        return deepcopy(self._graph)
+
+    def networks_generator(
+            self,
+            root_company_ids: Sequence[CompanyIDType],
+            parameter_states: Sequence[QueryParameterState] = None,
+            ) -> Generator[Sequence[Graph], None, None]:
+        """Query the ``root_company_ids`` list in order."""
+        for i, root_company_id in enumerate(root_company_ids):
+            if parameter_states:
+                self._parameter_state = parameter_states[i]
+            yield self.get_network(root_company_id)
+
+    def get_composed_network(self, *args, **kwargs):
+        """Iterate over querires then return self._graph."""
+        [g for g in self.networks_generator(*args, **kwargs)]
+        return deepcopy(self._graph)
+
+    async def async_networks_generator(
+            self,
+            root_company_ids: Sequence[CompanyIDType],
+            parameter_states: Sequence[QueryParameterState] = None,
+            ) -> AsyncGenerator[Sequence[Graph], None]:
+        """Async query the ``root_company_ids`` list in order."""
+        for i, root_company_id in enumerate(root_company_ids):
+            if parameter_states:
+                self._parameter_state = parameter_states[i]
+            yield self.get_network(root_company_id)
+
+    async def async_get_composed_network(self, *args, **kwargs) -> Graph:
+        """Async iterate over querires then return self._graph."""
+        [g async for g in self.async_networks_generator(*args, **kwargs)]
+        return deepcopy(self._graph)
 
     def _get_officer_name(self,
                           officer_id: str,
