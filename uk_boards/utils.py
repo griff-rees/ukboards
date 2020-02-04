@@ -1,18 +1,84 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from csv import DictReader
+
+import logging
+
 from pathlib import Path
+
+from typing import Optional, Sequence
 
 import requests
 from requests.exceptions import ConnectionError
-
 
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
 DEFAULT_API_KEY_PATH = Path('.env')
 
+DEFUALT_COMPANY_COLUMN = 'Company'
+DEFUALT_CHARITY_COLUMN = 'Charity'
+DEFUALT_ORGANISATION_COLUMN = 'Organisation'
 
-class InternetConnectionError(Exception):
+LOG_PATH = Path('logs/')
+LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
+
+logger = logging.getLogger(__name__)
+
+
+def read_csv(path: str, **kwargs) -> Sequence[dict]:
+    """Open `path` and return a list of dicts."""
+    with open(path, **kwargs) as csv_file:
+        for i, line in enumerate(DictReader(csv_file, **kwargs)):
+            yield i, line
+
+
+def add_file_logger(logger_instance: logging.Logger,
+                    logging_level: Optional[int] = logging.INFO,
+                    log_path: str = LOG_PATH,
+                    reset_log: bool = True):
+    """Add a file logger."""
+    if logging_level:
+        logger_instance.setLevel(logging_level)
+    if log_path != LOG_PATH:
+        # logging_level = logging_level or logging.DEBUG
+        log_path = Path(log_path)
+        log_path.parent.mkdir(exist_ok=True, parents=True)
+        if reset_log:
+            file_handler = logger_instance.FileHandler(log_path, mode='w')
+        else:
+            file_handler = logger_instance.FileHandler(log_path)
+        file_handler.setLevel(logging_level)
+        logger.addHandler(file_handler)
+
+
+class Error(Exception):
+
+    """Base class for exceptions in this module.
+
+    See: https://docs.python.org/3/tutorial/errors.html
+    """
+
+    pass
+
+
+class NegativeIntBranchException(Error):
+
+    """Error of a branch being a non-integer and/or less than 0."""
+
+    def __init__(self, branches: int,
+                 message: str = None,
+                 ) -> None:
+        self.branches = branches
+        self.message = message or (f"{branches} is an invalid number of "
+                                   "network branches. It must be an int "
+                                   "and > 0.")
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class InternetConnectionError(Error):
 
     """Either no internet connection or a restricted local network."""
 

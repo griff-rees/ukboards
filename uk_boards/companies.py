@@ -18,9 +18,8 @@ from networkx import (Graph, compose, is_bipartite, is_connected,
 import requests
 from requests.exceptions import ConnectionError
 
-from .uk_boards import Error, NegativeIntBranchException  # aenumerate
-from .utils import (InternetConnectionError, get_external_ip_address,
-                    DEFAULT_API_KEY_PATH)
+from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
+                    get_external_ip_address, DEFAULT_API_KEY_PATH)
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ CompanyIDType = Union[str, int]
 
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
 
-QueryParameterState = Dict[str, Union[int, bool]]
+QueryParameters = Dict[str, Union[int, bool]]
 
 COMPANY_NETWORK_KINDS = ('company', 'officer', 'controller')
 
@@ -182,7 +181,7 @@ class CompanyNetworkClient:
         # Initiate `` _reset_cache onsistent`` to support
         # application of ``compose_queries_required`` but worth  leaving
         # independet in some cases
-        self._reset_cache = not compose_queried_networks
+        self._reset_cache = reset_cache
         self._root_company_id = None
         self._graph = Graph()
         self._officer_appointments_cache = {}
@@ -199,15 +198,15 @@ class CompanyNetworkClient:
         self._reset_cache = value
 
     @property
-    def _parameter_state(self) -> QueryParameterState:
+    def _parameter_state(self) -> QueryParameters:
         """Return the state of the parameters passable to __init__."""
         return {varname: getattr(self, varname)
                 for varname in self.__init__.__code__.co_varnames
                 if varname != 'self'}
 
     @_parameter_state.setter
-    def _parameter_state(self, var: QueryParameterState) -> None:
-        for varname, value in QueryParameterState:
+    def _parameter_state(self, var: QueryParameters) -> None:
+        for varname, value in QueryParameters:
             setattr(self, varname, value)
 
     @property
@@ -254,11 +253,10 @@ class CompanyNetworkClient:
 
         return deepcopy(self._graph)
 
-    def networks_generator(
-            self,
-            root_company_ids: Sequence[CompanyIDType],
-            parameter_states: Sequence[QueryParameterState] = None,
-            ) -> Generator[Sequence[Graph], None, None]:
+    def networks_generator(self,
+                           root_company_ids: Sequence[CompanyIDType],
+                           parameter_states: Sequence[QueryParameters] = None,
+                           ) -> Generator[Sequence[Graph], None, None]:
         """Query the ``root_company_ids`` list in order."""
         for i, root_company_id in enumerate(root_company_ids):
             if parameter_states:
@@ -273,7 +271,7 @@ class CompanyNetworkClient:
     async def async_networks_generator(
             self,
             root_company_ids: Sequence[CompanyIDType],
-            parameter_states: Sequence[QueryParameterState] = None,
+            parameter_states: Sequence[QueryParameters] = None,
             ) -> AsyncGenerator[Sequence[Graph], None]:
         """Async query the ``root_company_ids`` list in order."""
         for i, root_company_id in enumerate(root_company_ids):
@@ -361,10 +359,6 @@ class CompanyNetworkClient:
     def _add_officer(self, officer_id: str, company_id: str,
                      officer_board_data: JSONDict) -> None:
         appointments_data = get_officer_appointments_data(officer_id)
-        # self._officer_appointments_cache[officer_id] = {
-        #     appointment['appointed_to']['company_number']: appointment
-        #     for appointment in appointments_data['items']
-        #     }
         self._officer_appointments_cache[officer_id] = {
             appointment['appointed_to']['company_number']: appointment
             for appointment in appointments_data['items']
@@ -434,17 +428,6 @@ class CompanyNetworkClient:
         if self.include_significant_controllers:
             self._include_controllers(company_id, company_info_dict,
                                       branch_iterator=branch_iterator)
-
-        # if officer_id not in self._graph.nodes:
-        #     self._add_officer(officer_id, company_id,
-        #                       officer_board_data)
-        # self._graph.add_edge(company_id, officer_id,
-        #                      data=officer_board_data)
-        # if 0 <= branch_iteration < self.branches:
-        #     self._get_network_branches(officer_id,
-        #                                branch_iteration + 1)
-        # elif branch_iteration < 0:
-        #     raise NegativeIntBranchException(branch_iteration)
         if company_id == self._root_company_id:
             self._query_end = datetime.now()
 
@@ -782,15 +765,6 @@ def get_significant_controller_company_data(company_id: str,
     return companies_house_query(f'/company/{company_id}/'
                                  'persons-with-significant-control/'
                                  f'corporate-entity/{firm_id}')
-
-
-# def is_inactive_board_member(officer_data: dict) -> bool:
-#     """Return boolean of whether officer is no longer a board member."""
-#     return (COMPANIES_HOUSE_RESIGNATION_KEYWORD in officer_data and
-#             datetime.strptime(
-#                 officer_data[COMPANIES_HOUSE_RESIGNATION_KEYWORD],
-#                 COMPANIES_HOUSE_DATE_FORMAT)
-#             < datetime.today())
 
 
 def is_inactive(person_data: dict,

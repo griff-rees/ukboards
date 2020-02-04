@@ -14,10 +14,11 @@ from networkx import (is_connected, connected_components, neighbors,
 from networkx.algorithms import bipartite
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 import os
 
-from typing import Callable, Sequence, Union
+from typing import Callable, Generator, Sequence, Union
 
 from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
@@ -32,9 +33,9 @@ from uk_boards.companies import (stringify_company_id,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_CEASED_KEYWORD,
                                  COMPANIES_HOUSE_URL)
-from uk_boards.uk_boards import NegativeIntBranchException
-from uk_boards.utils import (get_external_ip_address,
-                             InternetConnectionError,
+from uk_boards.utils import (InternetConnectionError,
+                             NegativeIntBranchException,
+                             get_external_ip_address,
                              CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                              DEFAULT_API_KEY_PATH)
 
@@ -197,7 +198,7 @@ class TestBasicQueries:
                                        max_trials=1, sleep_time=10)
         for key, value in PUNCHDRUNK_DICT_SUBSET.items():
             assert output[key] == value
-        assert caplog.records == []
+        assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
     @pytest.mark.remote_data
     @pytest.mark.xfail
@@ -361,6 +362,11 @@ APPOINTMENTS_3 = {
 NO_APPOINTMENT_WARNING_PREFIX = "No 'name' data available for officer "
 NO_APPOINTMENT_WARNING_SUFFIX = " in appointments_cache"
 
+LOG_PREFIXES_429 = (
+    'Status code 429 from ',
+    'Trying again in 60 seconds...'
+)
+
 
 # Todo: replace this with ``generate_mock_logs_sequence``
 BARBICAN_ONE_HOP_LOGS = [
@@ -378,10 +384,31 @@ BARBICAN_ONE_HOP_LOGS = [
 ]
 
 
-def barbican_one_hop_caplog_tests(caplog) -> None:
+def barbican_one_hop_caplog_tests(
+        caplog: LogCaptureFixture,
+        prefix: str = NO_APPOINTMENT_WARNING_SUFFIX) -> None:
+    """Iterate over caplog messages beginning with ``prefix``.
+
+    Todo:
+        * Generalise this with parameters for other log sources.
+    """
     for i, message in enumerate(m for m in caplog.messages if
-                                m.startswith(NO_APPOINTMENT_WARNING_PREFIX)):
+                                m.startswith(prefix)):
         assert BARBICAN_ONE_HOP_LOGS[i] == message
+
+
+def filter_caplogs_by_prefix(messages: list,
+                             prefixes: Sequence[str] = LOG_PREFIXES_429,
+                             ) -> Generator[str, None, None]:
+    """Filter caplogs that begin with ``prefixes`` (default 429 errors)."""
+    for i, message in enumerate(messages):
+        include = True
+        for prefix in prefixes:
+            if message.startswith(prefix):
+                include = False
+                break
+        if include:
+            yield message
 
 
 def generate_mock_logs_sequence(
@@ -494,7 +521,7 @@ class TestGetCompanyNetwork:
         punchdrunk, board_members = bipartite.sets(company_network)
         assert len(board_members) == 33
         basic_officer_tests(company_network)
-        assert caplog.records == []
+        assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
     @pytest.mark.remote_data
     @skip_if_not_allowed_ip
@@ -809,7 +836,7 @@ async def test_0_hop_composed_network_generator(caplog):
     graphs = [g async for g in cn_client.async_networks_generator(company_ids)]
     assert tuple(cn_client._root_node_ids) == company_ids
     assert len(graphs[0]) == 5
-    assert len(graphs[1]) == 38
+    assert len(graphs[1]) == 34
     assert number_connected_components(graphs[1]) == 1
     assert cn_client._runs[1]['connected_components_count'] == 1
 
@@ -861,8 +888,9 @@ def test_async_get_composed_network(caplog, benchmark):
     def test_async_compose(company_ids=company_ids, cn_client=cn_client):
         cn_client.get_composed_network(company_ids)
 
-    assert len(cn_client._graph) == 16
-    assert caplog.records == []
+    assert len(cn_client._graph) == 11
+    assert cn_client._runs[-1]['connected_components_count'] == 1
+    assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
 
 @pytest.mark.remote_data
@@ -874,8 +902,9 @@ def test_get_composed_network(caplog, benchmark):
                                      exclude_non_active_companies=True,
                                      exclude_resigned_board_members=True)
     benchmark(cn_client.get_composed_network, company_ids)
-    assert len(cn_client._graph) == 16
-    assert caplog.records == []
+    assert len(cn_client._graph) == 11
+    assert cn_client._runs[-1]['connected_components_count'] == 1
+    assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
 
 @pytest.mark.remote_data
