@@ -5,9 +5,11 @@ from csv import DictReader
 
 import logging
 
+from os import PathLike
+
 from pathlib import Path
 
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence, Union
 
 import requests
 from requests.exceptions import ConnectionError
@@ -16,40 +18,45 @@ CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
 DEFAULT_API_KEY_PATH = Path('.env')
 
-DEFUALT_COMPANY_COLUMN = 'Company'
-DEFUALT_CHARITY_COLUMN = 'Charity'
-DEFUALT_ORGANISATION_COLUMN = 'Organisation'
-
 LOG_PATH = Path('logs/')
 LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
 
 logger = logging.getLogger(__name__)
 
+QueryParameters = Dict[str, Union[int, bool]]
 
-def read_csv(path: str, **kwargs) -> Sequence[dict]:
+DataRowDict = Dict[str, Union[str, int]]
+
+RunConfigType = Dict[str, Optional[QueryParameters]]
+
+
+def read_csv(path: str, **kwargs) -> Sequence[DataRowDict]:
     """Open `path` and return a list of dicts."""
     with open(path, **kwargs) as csv_file:
         for i, line in enumerate(DictReader(csv_file, **kwargs)):
             yield i, line
 
 
-def add_file_logger(logger_instance: logging.Logger,
+def add_file_logger(logger_instance: logging.Logger = None,
                     logging_level: Optional[int] = logging.INFO,
-                    log_path: str = LOG_PATH,
+                    log_path: PathLike = LOG_PATH,
                     reset_log: bool = True):
     """Add a file logger."""
+    if not logger_instance:
+        logger_instance = logging.Logger()
     if logging_level:
         logger_instance.setLevel(logging_level)
-    if log_path != LOG_PATH:
+    # if log_path != LOG_PATH:
         # logging_level = logging_level or logging.DEBUG
+    if type(log_path) == str:
         log_path = Path(log_path)
-        log_path.parent.mkdir(exist_ok=True, parents=True)
-        if reset_log:
-            file_handler = logger_instance.FileHandler(log_path, mode='w')
-        else:
-            file_handler = logger_instance.FileHandler(log_path)
-        file_handler.setLevel(logging_level)
-        logger.addHandler(file_handler)
+    log_path.parent.mkdir(exist_ok=True, parents=True)
+    if reset_log:
+        file_handler = logging.FileHandler(log_path, mode='w')
+    else:
+        file_handler = logging.FileHandler(log_path)
+    file_handler.setLevel(logging_level)
+    logger.addHandler(file_handler)
 
 
 class Error(Exception):

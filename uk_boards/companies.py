@@ -19,7 +19,8 @@ import requests
 from requests.exceptions import ConnectionError
 
 from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
-                    get_external_ip_address, DEFAULT_API_KEY_PATH)
+                    QueryParameters, RunConfigType, get_external_ip_address,
+                    DEFAULT_API_KEY_PATH)
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,6 @@ JSONDict = Dict[str, Any]
 CompanyIDType = Union[str, int]
 
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
-
-QueryParameters = Dict[str, Union[int, bool]]
 
 COMPANY_NETWORK_KINDS = ('company', 'officer', 'controller')
 
@@ -182,10 +181,10 @@ class CompanyNetworkClient:
         # application of ``compose_queries_required`` but worth  leaving
         # independet in some cases
         self._reset_cache = reset_cache
-        self._root_company_id = None
-        self._graph = Graph()
-        self._officer_appointments_cache = {}
-        self._runs = []
+        self._root_company_id: Optional[CompanyIDType] = None
+        self._graph: Graph = Graph()
+        self._officer_appointments_cache: Dict = {}
+        self._runs: Sequence[RunConfigType] = []
 
     @property
     def reset_cache(self) -> bool:
