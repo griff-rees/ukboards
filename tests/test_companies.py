@@ -7,8 +7,6 @@ import asyncio
 
 from copy import deepcopy
 
-from dotenv import load_dotenv
-
 from networkx import (is_connected, connected_components, neighbors,
                       number_connected_components, Graph)
 from networkx.algorithms import bipartite
@@ -16,12 +14,11 @@ from networkx.algorithms import bipartite
 import pytest
 from _pytest.logging import LogCaptureFixture
 
-import os
-
 from typing import Callable, Generator, Sequence, Union
 
 from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
+                                 get_company_officers,
                                  get_company_network,
                                  get_kinds_ids_dict,
                                  is_inactive,
@@ -32,19 +29,12 @@ from uk_boards.companies import (stringify_company_id,
                                  CompanyIDType,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_CEASED_KEYWORD,
-                                 COMPANIES_HOUSE_URL)
-from uk_boards.utils import (InternetConnectionError,
-                             NegativeIntBranchException,
-                             get_external_ip_address,
+                                 COMPANIES_HOUSE_URL,
+                                 OFFICER_LINKS_KEY)
+from uk_boards.company_codes import COMPANIES_HOUSE_URI_CODES
+from uk_boards.utils import (NegativeIntBranchException,
                              CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                              DEFAULT_API_KEY_PATH)
-
-
-load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
-
-COMPANIES_HOUSE_ALLOWED_IP_ADDRESS_NAME = 'COMPANIES_HOUSE_ALLOWED_IP_ADDRESS'
-COMPANIES_HOUSE_ALLOWED_IP_ADDRESS = os.getenv(
-    COMPANIES_HOUSE_ALLOWED_IP_ADDRESS_NAME, '')
 
 PUNCHDRUNK_COMPANY_NAME = "PUNCHDRUNK"
 PUNCHDRUNK_COMPANY_ID = '04547069'
@@ -52,17 +42,6 @@ PUNCHDRUNK_JSON_SUBSET = ('{{"status": "active", '
                           f'"company_name": "{PUNCHDRUNK_COMPANY_NAME}"}}')
 PUNCHDRUNK_DICT_SUBSET = {"status": "active",
                           "company_name": PUNCHDRUNK_COMPANY_NAME}
-
-try:
-    IP_ADDRESS = get_external_ip_address()
-except InternetConnectionError:
-    IP_ADDRESS = None
-    pass
-
-skip_if_not_allowed_ip = pytest.mark.skipif(
-    IP_ADDRESS != COMPANIES_HOUSE_ALLOWED_IP_ADDRESS,
-    reason="Fails unless ip address is registered for Companies House api key."
-)
 
 
 def company_url(company_id: str) -> str:
@@ -183,7 +162,7 @@ class TestBasicQueries:
         assert [rec.message for rec in caplog.records] == correct_log_output
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_basic_company_query(self, caplog):
         """Test an actual company house query, skipped by default.
 
@@ -202,7 +181,7 @@ class TestBasicQueries:
 
     @pytest.mark.remote_data
     @pytest.mark.xfail
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_officers_query(self, caplog):
         """Test querying for officers with an option for register_view.
 
@@ -216,6 +195,18 @@ class TestBasicQueries:
         # for key, value in PUNCHDRUNK_DICT_SUBSET.items():
         #     assert output[key] == value
         # assert caplog.records == []
+
+
+@pytest.mark.remote_data
+@pytest.mark.xfail
+@pytest.mark.skip_if_not_allowed_ip
+def test_CEO_officers_query(caplog):
+    """Test querying for officers with an option for register_view.
+
+    Currently including this option yields a 400 error.
+    """
+    officers = get_company_officers("CE010135")
+    assert officers is None
 
 
 OFFICER_0_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
@@ -249,7 +240,12 @@ PUNCHDRUNK_JSON = {
     'company_number': PUNCHDRUNK_COMPANY_ID,
     'company_status': 'active',
     'company_name': PUNCHDRUNK_COMPANY_NAME,
+    'links': {
+        OFFICER_LINKS_KEY:
+            f'/company/{PUNCHDRUNK_COMPANY_ID}/{OFFICER_LINKS_KEY}'
+        }
 }
+
 PUNCHDRUNK_OFFICERS_JSON = {
         'active_count': 10,
         'inactive_count': 0,
@@ -291,6 +287,11 @@ BARBICAN_THEATRE_JSON = {
     'company_number': BARBICAN_THEATRE_COMPANY_ID,
     'company_status': 'active',
     'company_name': BARBICAN_THEATRE_COMPANY_NAME,
+    'links': {
+        'officers': {
+            'appointments': f'/company/{BARBICAN_THEATRE_COMPANY_ID}/officers'
+            }
+        }
 }
 
 BARBICAN_OFFICERS_JSON = deepcopy(PUNCHDRUNK_OFFICERS_JSON)
@@ -309,6 +310,11 @@ SHARED_EXPERIENCE_JSON = {
     'company_number': SHARED_EXPERIENCE_COMPANY_ID,
     'company_status': 'active',
     'company_name': SHARED_EXPERIENCE_COMPANY_NAME,
+    'links': {
+        'officers': {
+            'appointments': f'/company/{SHARED_EXPERIENCE_COMPANY_ID}/officers'
+            }
+        }
 }
 
 SHARED_OFFICERS_JSON = deepcopy(BARBICAN_OFFICERS_JSON)
@@ -510,7 +516,7 @@ class TestGetCompanyNetwork:
     """Test constructing company networks."""
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_basic_board(self, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
         company_network = get_company_network(PUNCHDRUNK_COMPANY_ID)
@@ -524,7 +530,7 @@ class TestGetCompanyNetwork:
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_1_branch_board_disconnected(self, caplog):
         """1 branch of Barbican Theatre Company has absent resigned link."""
         company_network = get_company_network(BARBICAN_THEATRE_COMPANY_ID,
@@ -543,7 +549,7 @@ class TestGetCompanyNetwork:
         barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_1_branch_enforce_missing_ties(self, caplog):
         """1 branch of Barbican Theatre Company with added missing link."""
         company_network = get_company_network(BARBICAN_THEATRE_COMPANY_ID,
@@ -564,7 +570,7 @@ class TestGetCompanyNetwork:
         barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     @pytest.mark.xfail
     def test_0_branch_warning_case(self, caplog):
         """0 branch query old error on company '01086582', needs fix."""
@@ -573,6 +579,16 @@ class TestGetCompanyNetwork:
                                               enforce_missing_ties=True)
         assert len(company_network) == 1334
         assert len(caplog.records) == 4
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_CEO_company(self, caplog):
+        """Test managing Charitable incorporated organisation cases."""
+        company_network = get_company_network('CE010135')
+        assert len(company_network) == 1
+        assert company_network.nodes[0]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
+        assert caplog.records == []
 
     def test_mock_basic_board(self, requests_mock, test_mock_api_get, caplog):
         """Test a simple query of PUNCHDRUNK and all board members"""
@@ -790,7 +806,7 @@ def test_mock_api_class_get() -> Callable:
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 @pytest.fixture
 def test_no_hop_fixture(caplog):
     """Cache a basic 0 hop query and cache for related tests."""
@@ -799,7 +815,7 @@ def test_no_hop_fixture(caplog):
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 @pytest.fixture
 def test_1_hop_fixture(caplog):
     """Cache a basic 1 hop query and cache for related tests."""
@@ -810,7 +826,7 @@ def test_1_hop_fixture(caplog):
 
 @pytest.mark.remote_data
 @pytest.mark.asyncio
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 @pytest.fixture
 async def test_0_hop_composed_network_generator_exclude_inactive(caplog):
     """Cache a basic 0 hop query filtered on active members and companies."""
@@ -828,7 +844,7 @@ async def test_0_hop_composed_network_generator_exclude_inactive(caplog):
 
 @pytest.mark.remote_data
 @pytest.mark.asyncio
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 async def test_0_hop_composed_network_generator(caplog):
     """Cache a basic 0 hop query and cache for related tests."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
@@ -843,7 +859,7 @@ async def test_0_hop_composed_network_generator(caplog):
 
 @pytest.mark.remote_data
 @pytest.mark.asyncio
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 async def test_0_hop_not_composed_network_generator(caplog):
     """Run a series of uncached 0 hop queries."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
@@ -859,7 +875,7 @@ async def test_0_hop_not_composed_network_generator(caplog):
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 @pytest.fixture
 def async_get_composed_network_fixture(caplog):
     """Cache a basic 0 hop query filtered on active members and companies."""
@@ -875,7 +891,7 @@ def async_get_composed_network_fixture(caplog):
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 def test_async_get_composed_network(caplog, benchmark):
     """Cache a basic 0 hop query of active members and companies."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
@@ -894,7 +910,7 @@ def test_async_get_composed_network(caplog, benchmark):
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 def test_get_composed_network(caplog, benchmark):
     """Cache a basic 1 hop query of active members and companies."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
@@ -908,7 +924,7 @@ def test_get_composed_network(caplog, benchmark):
 
 
 @pytest.mark.remote_data
-@skip_if_not_allowed_ip
+@pytest.mark.skip_if_not_allowed_ip
 def test_get_significant_controllers(caplog):
     """Test querying siginificant controllers of PUNCHDRUNK."""
     significant_controllers_data = get_significant_controllers_data(
@@ -937,7 +953,7 @@ class TestCompanyNetwork:
                                       "branches. It must be an int and > 0.")
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_client_basic_board(self, caplog, test_no_hop_fixture):
         """Test a simple query of PUNCHDRUNK and all board members"""
         company_network = test_no_hop_fixture
@@ -951,7 +967,7 @@ class TestCompanyNetwork:
         assert caplog.records == []
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_client_basic_board_with_controllers(self, caplog):
         """Test a simple query of Barbican Theatre board members"""
         correct_kinds = {'company': 1, 'officer': 4, 'controller': 3}
@@ -968,7 +984,7 @@ class TestCompanyNetwork:
         assert caplog.records == []
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_client_basic_only_controllers(self, caplog):
         """Test a simple query of Barbican Theatre board members"""
         correct_kinds = {'company': 1, 'controller': 3}
@@ -986,7 +1002,7 @@ class TestCompanyNetwork:
         assert caplog.records == []
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_client_1_branch_enforce_missing_ties(self, caplog,
                                                   test_1_hop_fixture):
         """1 branch of Barbican Theatre Company with added missing link."""
@@ -1007,7 +1023,7 @@ class TestCompanyNetwork:
         barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.remote_data
-    @skip_if_not_allowed_ip
+    @pytest.mark.skip_if_not_allowed_ip
     def test_client_1_branch_board_disconnected(self, caplog,
                                                 test_1_hop_fixture):
         """1 branch of Barbican Theatre Company has absent resigned link."""
@@ -1025,6 +1041,32 @@ class TestCompanyNetwork:
             assert officer_id in barbican_theatre_net
             assert officer_id not in shared_experience_net
         barbican_one_hop_caplog_tests(caplog)
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_CEO_company(self, caplog):
+        """Test managing Charitable incorporated organisation cases."""
+        cn_client = CompanyNetworkClient()
+        company_network = cn_client.get_network('CE010135')
+        assert len(company_network) == 1
+        assert company_network.nodes[0]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
+        assert caplog.records == []
+
+    def test_incorrect_company_id(self, requests_mock, test_mock_api_class_get,
+                                  caplog):
+        """Test incorrect company ids get fixed automatically."""
+        shortened_punchdrunk_id = PUNCHDRUNK_COMPANY_ID[1:]
+        client, company_network = test_mock_api_class_get(
+                requests_mock, shortened_punchdrunk_id)
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+        assert len(company_network) == 3
+        assert is_connected(company_network)
+        punchdrunk, board_members = bipartite.sets(company_network)
+        assert len(board_members) == 2
+        basic_client_officer_tests(company_network)
+        test_mock_caplogs(caplog, (0, 1))
 
     def test_mock_basic_board(self, requests_mock, test_mock_api_class_get,
                               caplog):

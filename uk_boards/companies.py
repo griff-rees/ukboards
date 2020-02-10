@@ -18,6 +18,7 @@ from networkx import (Graph, compose, is_bipartite, is_connected,
 import requests
 from requests.exceptions import ConnectionError
 
+from .company_codes import COMPANIES_HOUSE_URI_CODES
 from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
                     QueryParameters, RunConfigType, get_external_ip_address,
                     DEFAULT_API_KEY_PATH)
@@ -45,6 +46,9 @@ CompanyIDType = Union[str, int]
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
 
 COMPANY_NETWORK_KINDS = ('company', 'officer', 'controller')
+
+OFFICER_LINKS_KEY = "officers"
+CONTROLLERS_LINKS_KEY = "persons_with_significant_control_statements"
 
 
 def companies_house_query(query: str,
@@ -150,7 +154,14 @@ def stringify_company_id(company_id: Union[int, str]) -> str:
 
 class CompanyNetworkClient:
 
-    """Recursively construct a network of companies and board members."""
+    """Recursively construct a network of companies and board members.
+
+    Todo:
+        * Consider abstracting to generically follow links
+        * Look up 'persons_with_significant_control_statements':
+          '/company/04547069/persons-with-significant-control-statements'
+          (a PUNCHDRUNK link)
+    """
 
     def __init__(self,
                  branches: int = 0,
@@ -221,6 +232,7 @@ class CompanyNetworkClient:
             * Consider adding logs for each run
             * Refactor considering different use cases
         """
+        root_company_id = stringify_company_id(root_company_id)
         if (self.reset_cache or not len(self._graph) or
                 self.compose_queried_networks):
             self._runs.append({'root_company_id': root_company_id,
@@ -332,7 +344,7 @@ class CompanyNetworkClient:
     def _include_officers(self, company_id: str,
                           company_info_dict: dict,
                           branch_iterator: int) -> None:
-        officers_data = get_company_officer_data(company_id)
+        officers_data = get_company_officers_data(company_id)
         company_info_dict['officers'] = officers_data
         officers = get_company_officers(company_id,
                                         self.exclude_resigned_board_members,
@@ -420,8 +432,11 @@ class CompanyNetworkClient:
         self._graph.add_node(company_id,
                              name=company_data['company_name'],
                              kind='company', is_person=False,
+                             category=get_company_category(company_id),
                              bipartite=0, data=company_info_dict)
-        if self.include_officers:
+        if (self.include_officers and
+                'links' in company_data and
+                OFFICER_LINKS_KEY in company_data['links']):
             self._include_officers(company_id, company_info_dict,
                                    branch_iterator=branch_iterator)
         if self.include_significant_controllers:
@@ -503,7 +518,9 @@ def get_company_network(company_id: CompanyIDType = '04547069',
     logger.debug(company['company_name'])
     g.add_node(company_id, name=company['company_name'],
                bipartite=0, data=company)
-    if include_officers:
+    if include_officers and (
+            'links' in company and
+            OFFICER_LINKS_KEY in company['links']):
         officers = get_company_officers(company_id, **kwargs)
         for officer_id, officer_data in officers:
             g.add_node(officer_id, name=officer_data['name'], bipartite=1,
@@ -517,7 +534,8 @@ def get_company_network(company_id: CompanyIDType = '04547069',
                                     company_id=company_id,
                                     officer_data=officer_data)}
             if include_edge_data:
-                # consider poping key from appointments to avoid excess loop
+                # consider poping key from appointments to avoid excess
+                # loop
                 try:
                     appointment_data = appointments[company_id]
                 except KeyError:
@@ -626,8 +644,8 @@ def get_company(company_id: CompanyIDType = '04547069',
     return company
 
 
-def get_company_officer_data(company_id: CompanyIDType = '04547069'
-                             ) -> JSONDict:
+def get_company_officers_data(company_id: CompanyIDType = '04547069'
+                              ) -> JSONDict:
     officers_query = companies_house_query(
             f'/company/{company_id}/officers')
     if not officers_query:
@@ -641,22 +659,24 @@ def get_company_officers(company_id: CompanyIDType = '04547069',
                          officers_query: JSONDict = None,
                          **kwargs) -> JSONItemsGenerator:
     """
-    Yield officer_id and officer data for from company_id's board.
+    Yield officer_id and officer data from company_id's board.
 
     Todo:
         * Refactor to return whole query to company for meta-data
     """
     if not officers_query:
-        officers_query = get_company_officer_data(company_id)
-    for officer in officers_query['items']:
-        if exclude_resigned_board_members:
-            if is_inactive(officer):
-                logger.debug(f"Skipping officer {officer['name']} because of "
-                             f"resignation on {officer['resigned_on']}")
-                continue
-        officer_id = officer['links']['officer']['appointments'].split('/')[2]
-        logger.debug(f'{company_id} {officer["name"]} {officer_id}')
-        yield officer_id, officer
+        officers_query = get_company_officers_data(company_id)
+    if officers_query:
+        for officer in officers_query['items']:
+            if exclude_resigned_board_members:
+                if is_inactive(officer):
+                    logger.debug(f"Skipping officer {officer['name']} because "
+                                 f"of resignation on {officer['resigned_on']}")
+                    continue
+            officer_id = officer['links']['officer'][
+                                          'appointments'].split('/')[2]
+            logger.debug(f'{company_id} {officer["name"]} {officer_id}')
+            yield officer_id, officer
 
 
 def get_officer_appointments(officer_id: str = None,
@@ -806,3 +826,17 @@ def filter_active_board_members(g: Graph) -> Graph:
                               is_inactive(data['data'])]
     subgraph.remove_nodes_from(inactive_board_members)
     return subgraph
+
+
+def get_company_category(company_id: CompanyIDType,
+                         uri_codes: Dict[str, str] = COMPANIES_HOUSE_URI_CODES
+                         ) -> Tuple[str, str]:
+    """Return a company category from the first 2 characters."""
+    company_id = stringify_company_id(company_id)
+    if company_id.isdigit():
+        return uri_codes[""]
+    try:
+        return uri_codes[company_id[:2]]
+    except KeyError:
+        raise KeyError(f"Company ID Number {company_id} has an unlisted "
+                       "prefix.")

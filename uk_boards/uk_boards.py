@@ -82,10 +82,10 @@ class OrganisationSequence(MutableSequence):
         * Include reset options in various cachable attributes
     """
     data_reader: Callable[..., OrganisationSequence] = read_csv
-    data_reader_params: Dict[str, Union[str, int]] = None
-    organisation_entry_params: Dict[str, str] = None
-    company_client_params: QueryParameters = None
-    charity_client_params: QueryParameters = None
+    data_reader_params: Dict[str, Union[str, int]] = field(default_factory=dict)
+    organisation_entry_params: Dict[str, str] = field(default_factory=dict)
+    company_client_params: QueryParameters = field(default_factory=dict)
+    charity_client_params: QueryParameters = field(default_factory=dict)
     reset_logs: bool = True
     _charity_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_runs: Sequence[RunConfigType] = field(default_factory=list)
@@ -96,7 +96,7 @@ class OrganisationSequence(MutableSequence):
     __charity_client: ClassVar[Callable] = get_charity_network
     # **kwargs
 
-    def __getitem__(self, index) -> Dict:
+    def __getitem__(self, index) -> OrganisationEntry:
         return self.organisations[index]
 
     def __setitem__(self, index, value) -> None:
@@ -126,14 +126,35 @@ class OrganisationSequence(MutableSequence):
         return self._organisations
 
     @property
-    def _company_client(self,
-                        *args: QueryParameters,
-                        **kwargs: QueryParameters) -> Graph:
-        if not self.__company_client:
-            self.__company_client = self.__company_client_class(
-                **self.company_client_params
-            )
-        return self.__company_client(*args, **kwargs)
+    def company_client(self,
+                       *args: QueryParameters,
+                       **kwargs: QueryParameters) -> Graph:
+        if not hasattr(self, "_company_client"):
+            self._company_client = (
+                    self._OrganisationSequence__company_client_class(
+                        **self.company_client_params
+                    ))
+            # self.__company_client = self.__company_client_class(
+            # )
+            # self._test_client = self.__company_client_class
+        # assert False
+        # return self._company_client.get_networks(*args, **kwargs)
+        return self._company_client
+
+    # @property
+    # def company_client(self,
+    #                    *args: QueryParameters,
+    #                    **kwargs: QueryParameters) -> Graph:
+    #     if not hasattr(self, "_company_client"):
+    #         self._company_client = (
+    #                 self._OrganisationSequence__company_client_class(
+    #                     **self.company_client_params
+    #                 ))
+    #         # self.__company_client = self.__company_client_class(
+    #         # )
+    #         # self._test_client = self.__company_client_class
+    #     # assert False
+    #     return self._company_client.get_networks(*args, **kwargs)
 
     @property
     def _charity_client(self,
@@ -182,9 +203,11 @@ class OrganisationSequence(MutableSequence):
                     organisation.company_network is None):
                 logger.info(f'Querying company {organisation.company_id} '
                             f'for {organisation.name}...')
-                dict_args = {**self.company_client_params, **kwargs}
-                network: Optional[Graph] = self._company_client(
-                        organisation.company_id, *args, **dict_args)
+                # dict_args = {**self.company_client_params, **kwargs}
+                # network: Optional[Graph] = self.company_client.get_network(
+                #         organisation.company_id, *args, **dict_args)
+                network: Optional[Graph] = self.company_client.get_network(
+                        organisation.company_id, *args, **kwargs)
                 self._company_runs.append(self._company_client._runs[-1])
                 setattr(organisation, 'company_network', network)
 
@@ -214,7 +237,7 @@ class OrganisationSequence(MutableSequence):
             self._get_company_networks(*args, **kwargs)
             self._company_network: Graph = deepcopy(
                     # Assuming ``_graph`` is best state to work with
-                    self._company_client._graph
+                    self.company_client._graph
                     )
         return deepcopy(self._company_network)
 
