@@ -14,10 +14,10 @@ import logging
 
 import time
 
-from typing import (Dict, Callable, ClassVar, Optional, List, Sequence, Tuple,
-                    Type, Union)
+from typing import (Dict, Callable, ClassVar, Optional, Generator, List,
+                    Sequence, Tuple, Type, Union)
 
-from networkx import Graph, compose_all, number_connected_components
+from networkx import Graph, compose_all,  number_connected_components
 
 from .companies import CompanyNetworkClient
 from .charities import get_charity_network
@@ -68,7 +68,7 @@ class OrganisationEntry:
         return self._name
 
 
-OrganisationSequence = List[OrganisationEntry]
+OrganisationSequenceList = List[OrganisationEntry]
 
 
 @dataclass
@@ -81,20 +81,21 @@ class OrganisationSequence(MutableSequence):
           ``CompanyNetworkClient``
         * Include reset options in various cachable attributes
     """
-    data_reader: Callable[..., OrganisationSequence] = read_csv
-    data_reader_params: Dict[str, Union[str, int]] = field(default_factory=dict)
+    data_reader: Callable[..., OrganisationSequenceList] = read_csv
+    data_reader_params: Dict[str,
+                             Union[str, int]] = field(default_factory=dict)
     organisation_entry_params: Dict[str, str] = field(default_factory=dict)
     company_client_params: QueryParameters = field(default_factory=dict)
     charity_client_params: QueryParameters = field(default_factory=dict)
     reset_logs: bool = True
     _charity_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_runs: Sequence[RunConfigType] = field(default_factory=list)
+    _company_networks_cached: bool = False
     __company_client_class: ClassVar[Type[CompanyNetworkClient]] = (
             CompanyNetworkClient
         )
     # __charity_client_class  # To be added when charity query is refactored
     __charity_client: ClassVar[Callable] = get_charity_network
-    # **kwargs
 
     def __getitem__(self, index) -> OrganisationEntry:
         return self.organisations[index]
@@ -114,13 +115,13 @@ class OrganisationSequence(MutableSequence):
     @property
     def organisations(self,
                       *args: QueryParameters,
-                      **kwargs: QueryParameters) -> OrganisationSequence:
+                      **kwargs: QueryParameters) -> OrganisationSequenceList:
         if not hasattr(self, '_organisations'):
             reader_dict_args: QueryParameters = {**self.data_reader_params,
                                                  **kwargs}
             org_entry_args: QueryParameters = {
                     **self.organisation_entry_params, **kwargs}
-            self._organisations: OrganisationSequence = [
+            self._organisations: OrganisationSequenceList = [
                     OrganisationEntry(org, **org_entry_args)
                     for _, org in self.data_reader(*args, **reader_dict_args)]
         return self._organisations
@@ -194,13 +195,22 @@ class OrganisationSequence(MutableSequence):
                         )
                 setattr(organisation, 'charity_network', network)
 
-    def _get_company_networks(self,
-                              *args: QueryParameters,
-                              **kwargs: QueryParameters) -> None:
+    def _get_company_networks_generator(self,
+                                        set_attr: bool = True,
+                                        yield_attr: bool = False,
+                                        *args: QueryParameters,
+                                        **kwargs: QueryParameters) -> None:
+        """Iterate organisations and query for company_network attribute.
+
+        Todo:
+            * Consider whether it's safer to return None for non company
+              entries.
+        """
         for organisation in self:
-            if organisation.company_id and (
-                    not hasattr(organisation, 'company_network') or
-                    organisation.company_network is None):
+            if not self._company_networks_cached and (
+                    organisation.company_id and (
+                        not hasattr(organisation, 'company_network') or
+                        organisation.company_network is None)):
                 logger.info(f'Querying company {organisation.company_id} '
                             f'for {organisation.name}...')
                 # dict_args = {**self.company_client_params, **kwargs}
@@ -209,7 +219,12 @@ class OrganisationSequence(MutableSequence):
                 network: Optional[Graph] = self.company_client.get_network(
                         organisation.company_id, *args, **kwargs)
                 self._company_runs.append(self._company_client._runs[-1])
-                setattr(organisation, 'company_network', network)
+                if set_attr:
+                    setattr(organisation, 'company_network', network)
+            if yield_attr:
+                if hasattr(organisation, 'company_network'):
+                    yield organisation, organisation.company_network
+        self._company_networks_cached = True
 
     @property
     def charity_network(self,
@@ -222,28 +237,81 @@ class OrganisationSequence(MutableSequence):
                     if hasattr(o, 'charity_network'))
         return deepcopy(self._charity_network)
 
-    @property
-    def company_network(self,
-                        *args: QueryParameters,
-                        **kwargs: QueryParameters) -> Graph:
+    def get_company_networks_generator(self,
+                                       reset: bool = False,
+                                       *args: QueryParameters,
+                                       **kwargs: QueryParameters,
+                                       ) -> Generator[Sequence[
+                                            Tuple[OrganisationEntry, Graph]],
+                                                  None, None]:
         """Return a deepcopy of a composition of all company graphs.
 
         Todo:
+            * Document the set_attr and yield_attr arguments
             * Consider ways to avoid confusion of charity graphs are
               independent but company graphs are not by default.
             * Consider taking advantage of just passing a list of company_ids
+            * Add options for resetting/requirying
+            * Add option for including all organisations or just those with
+              companies
         """
-        if not hasattr(self, '_company_network'):
-            self._get_company_networks(*args, **kwargs)
-            self._company_network: Graph = deepcopy(
-                    # Assuming ``_graph`` is best state to work with
-                    self.company_client._graph
-                    )
-        return deepcopy(self._company_network)
+        if reset:
+            self._company_networks_cached = False
+        for organisation, network in self._get_company_networks_generator(
+                yield_attr=True, *args, **kwargs):
+            yield organisation, network
+
+        # orgs = [(organisation, deepcopy(organisation.company_network)) for
+        #         organisation in self if hasattr(self, 'company_network')]
+        # assert False
+        # return orgs
+
+    def get_company_networks(self, *args, **kwargs) -> Sequence[Graph]:
+        """Return list from get_company_networks_generator."""
+        return list(self.get_company_networks_generator(*args, **kwargs))
+
+    def get_composed_company_network(self,
+                                     # cache: bool = False,
+                                     *args: QueryParameters,
+                                     **kwargs: QueryParameters,
+                                     ) -> Graph:
+        """Return a composed network of all in self.Organisations companies.
+
+        Todo:
+            * Take advantage of cache option to just compose networks
+            * Add option to cache this attribute on class
+            * Consider adding decorator for managing parameter_states
+            * Add a run summary to _company_runs
+        """
+        if self._company_networks_cached:
+            return compose_all(graph for _, graph in
+                               self.get_company_networks())
+        # elif cache:
+        #     logging.warning("Caching results during query so company_network "
+        #                     "components are increasing in size in the order "
+        #                     "they are queried, in this case starting with"
+        #                     f"{self[0]} and ending with {self[-1]}.")
+        else:
+            initial_parameter_state = self.company_client._parameter_state
+            prior_runs = len(self.company_client._runs)
+            composed_graph = self.company_client.get_composed_network(
+                root_company_ids=(o.company_id for o in self if o.company_id),
+                parameter_states=({'compose_queried_networks': True,
+                                   '_reset_cache': False} for o in self
+                                  if o.company_id),)
+            self._company_runs.append({
+                'composed_runs': [r for r in
+                                  self.company_client._runs[prior_runs:]]})
+            self.company_client._parameter_state = initial_parameter_state
+            return composed_graph
 
     def get_networks(self,
                      records: Optional[int] = None,
                      start_entry: int = 0,
+                     companies: bool = True,
+                     charities: bool = True,
+                     composed: bool = True,
+                     correct_seed_graphs: bool = True,
                      log_to_file: bool = True) -> Tuple[Optional[Graph],
                                                         Optional[Graph]]:
         # if logging_level:
@@ -264,22 +332,25 @@ class OrganisationSequence(MutableSequence):
         # records = records or len(organisations_list)
         if log_to_file:
             add_file_logger()
-        records = records or len(self)
         start = time.localtime()
         logger.info(f'Start: {time.strftime(LOG_TIME_FORMAT, start)}')
         if start_entry:
             logger.info(f'Beginning with record {start_entry}')
         try:
-            for i, organisation in enumerate(self[start_entry:records]):
-                # if i % 10 is 0:
-                # Sort out printing timing estimates
-                # deciles = time.localtime()
-                # logger.info('Average time per organisation: {}'.format(
-                # ))
-                logger.info(f'{organisation.name:80} {i+1}/'
-                            f'{records-start_entry}')
-                # organisation._get_networks(branches)
-                print()
+            self._companies_network = self.get_composed_company_network()
+            # for i, organisation in enumerate(self[start_entry:records]):
+            #     if correct_seed_graphs:
+            #         self.get_company_networks()
+
+            #     # if i % 10 is 0:
+            #     # Sort out printing timing estimates
+            #     # deciles = time.localtime()
+            #     # logger.info('Average time per organisation: {}'.format(
+            #     # ))
+            #     logger.info(f'{organisation.name:80} {i+1}/'
+            #                 f'{records-start_entry}')
+            #     # organisation._get_networks(branches)
+            #     print()
         finally:
             end = time.localtime()
             logger.info(f'End: {time.strftime(LOG_TIME_FORMAT, end)}')
@@ -288,4 +359,15 @@ class OrganisationSequence(MutableSequence):
         # if pickle_path:
         #     with open(pickle_path, 'wb') as pickle_file:
         #         pickle.dump(organisations_list, pickle_file)
-        return self._company_network, self._charity_network
+        # return self._company_network, self._charity_network
+        return self._company_network
+
+    def write_networks(self,
+                       records,
+                       start_entry,
+                       companies,
+                       charities, path) -> None:
+        for organisation in self:
+            if companies and hasattr(organisation, "company_network"):
+                pass
+

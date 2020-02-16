@@ -216,7 +216,7 @@ class CompanyNetworkClient:
 
     @_parameter_state.setter
     def _parameter_state(self, var: QueryParameters) -> None:
-        for varname, value in QueryParameters:
+        for varname, value in var.items():
             setattr(self, varname, value)
 
     @property
@@ -269,9 +269,9 @@ class CompanyNetworkClient:
                            parameter_states: Sequence[QueryParameters] = None,
                            ) -> Generator[Sequence[Graph], None, None]:
         """Query the ``root_company_ids`` list in order."""
-        for i, root_company_id in enumerate(root_company_ids):
+        for root_company_id in root_company_ids:
             if parameter_states:
-                self._parameter_state = parameter_states[i]
+                self._parameter_state = next(parameter_states)
             yield self.get_network(root_company_id)
 
     def get_composed_network(self, *args, **kwargs):

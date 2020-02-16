@@ -32,15 +32,46 @@ def test_load_csv_of_organisations(test_orgs):
                                  'Charity 1136495')
 
 
-@pytest.mark.xfail
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-def test_get_company_network(test_orgs):
+def test_get_company_networks(test_orgs):
+    """Test getting company_network.
+
+    Todo:
+        * Consider avoiding deepcopy in some places
+    """
+    company_networks = test_orgs.get_company_networks()
+    assert len(company_networks) == 22
+    assert (len(company_networks[4][1]) ==
+            len(test_orgs[4].company_network) ==
+            15)
+    assert test_orgs._company_runs[4]['connected_components_count'] == 1
+    assert test_orgs._company_runs[4]['kinds_ids_dict'][
+            'company'] == {'07007198'}
+    assert len(test_orgs._company_runs[4]['kinds_ids_dict'][
+            'officer']) == 14
+    composed_network = test_orgs.get_composed_company_network()
+    assert len(composed_network) == 420
+
+
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_get_composed_company_network(test_orgs):
     """Test getting company_network.
 
     Todo:
         * Consider avoiding deepcopy in some places
         * Currently retuns about 6 nodes
     """
-    company_network = test_orgs.company_network
-    assert len(company_network) == 200
+    composed_network = test_orgs.get_composed_company_network()
+    assert len(composed_network) == 420
+    assert len(test_orgs._company_runs) == 1
+    assert len(test_orgs._company_runs[0]['composed_runs']) == 22
+    assert test_orgs._company_runs[0]['composed_runs'][4][
+            'root_company_id'] == '07007198'
+    assert len(test_orgs._company_runs[0]['composed_runs'][4][
+            'kinds_ids_dict']['officer']) == 93
+    assert len(test_orgs._company_runs[0]['composed_runs'][3][
+            'kinds_ids_dict']['officer']) == 79
+    assert len(test_orgs._company_runs[0]['composed_runs'][4][
+            'kinds_ids_dict']['company']) == 5

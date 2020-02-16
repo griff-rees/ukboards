@@ -198,15 +198,14 @@ class TestBasicQueries:
 
 
 @pytest.mark.remote_data
-@pytest.mark.xfail
 @pytest.mark.skip_if_not_allowed_ip
-def test_CEO_officers_query(caplog):
+def test_CIO_officers_query(caplog):
     """Test querying for officers with an option for register_view.
 
     Currently including this option yields a 400 error.
     """
-    officers = get_company_officers("CE010135")
-    assert officers is None
+    officers = list(get_company_officers("CE010135"))
+    assert officers == []
 
 
 OFFICER_0_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
@@ -370,7 +369,8 @@ NO_APPOINTMENT_WARNING_SUFFIX = " in appointments_cache"
 
 LOG_PREFIXES_429 = (
     'Status code 429 from ',
-    'Trying again in 60 seconds...'
+    'Trying again in 60 seconds...',
+    'Status code 502 from ',
 )
 
 
@@ -407,7 +407,7 @@ def filter_caplogs_by_prefix(messages: list,
                              prefixes: Sequence[str] = LOG_PREFIXES_429,
                              ) -> Generator[str, None, None]:
     """Filter caplogs that begin with ``prefixes`` (default 429 errors)."""
-    for i, message in enumerate(messages):
+    for message in messages:
         include = True
         for prefix in prefixes:
             if message.startswith(prefix):
@@ -529,15 +529,20 @@ class TestGetCompanyNetwork:
         basic_officer_tests(company_network)
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
+    @pytest.mark.xfail
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_1_branch_board_disconnected(self, caplog):
-        """1 branch of Barbican Theatre Company has absent resigned link."""
+        """1 branch of Barbican Theatre Company has absent resigned link.
+
+        Todo:
+            * Find another example company network with disconnected boards
+        """
         company_network = get_company_network(BARBICAN_THEATRE_COMPANY_ID,
                                               branches=1)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 367
+        assert len(company_network) == 366
         assert not is_connected(company_network)
         barbican_theatre_net, shared_experience_net = connected_components(
             company_network)
@@ -557,7 +562,7 @@ class TestGetCompanyNetwork:
                                               enforce_missing_ties=True)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 367
+        assert len(company_network) == 366
         assert is_connected(company_network)
         barbican_theatre_board, shared_experience_board = (
             set(neighbors(company_network, n))
@@ -581,12 +586,14 @@ class TestGetCompanyNetwork:
         assert len(caplog.records) == 4
 
     @pytest.mark.remote_data
+    @pytest.mark.xfail
     @pytest.mark.skip_if_not_allowed_ip
-    def test_CEO_company(self, caplog):
+    def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
+        # Currently this attribute doesn't get added, save for post refactor
         company_network = get_company_network('CE010135')
         assert len(company_network) == 1
-        assert company_network.nodes[0]['category'] == (
+        assert company_network.nodes['CE010135']['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
 
@@ -1010,7 +1017,7 @@ class TestCompanyNetwork:
         company_network = cn_client.get_network(BARBICAN_THEATRE_COMPANY_ID)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 367
+        assert len(company_network) == 366
         assert is_connected(company_network)
         barbican_theatre_board, shared_experience_board = (
             set(neighbors(company_network, n))
@@ -1022,16 +1029,21 @@ class TestCompanyNetwork:
         assert {OFFICER_1_ID, OFFICER_2_ID} < barbican_theatre_board
         barbican_one_hop_caplog_tests(caplog)
 
+    @pytest.mark.xfail
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_client_1_branch_board_disconnected(self, caplog,
                                                 test_1_hop_fixture):
-        """1 branch of Barbican Theatre Company has absent resigned link."""
+        """1 branch of Barbican Theatre Company has absent resigned link.
+
+        Todo:
+            * Find another example company network with disconnected boards
+        """
         cn_client = test_1_hop_fixture
         company_network = cn_client._graph
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 367
+        assert len(company_network) == 366
         assert not is_connected(company_network)
         barbican_theatre_net, shared_experience_net = connected_components(
             company_network)
@@ -1044,12 +1056,12 @@ class TestCompanyNetwork:
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
-    def test_CEO_company(self, caplog):
+    def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
         cn_client = CompanyNetworkClient()
         company_network = cn_client.get_network('CE010135')
         assert len(company_network) == 1
-        assert company_network.nodes[0]['category'] == (
+        assert company_network.nodes['CE010135']['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
 

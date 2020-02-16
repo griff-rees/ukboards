@@ -3,13 +3,17 @@
 
 from csv import DictReader
 
+from json import dump, load
+
 import logging
+
+from networkx import Graph, node_link_data, node_link_graph
 
 from os import PathLike
 
 from pathlib import Path
 
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import requests
 from requests.exceptions import ConnectionError
@@ -17,6 +21,8 @@ from requests.exceptions import ConnectionError
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
 DEFAULT_API_KEY_PATH = Path('.env')
+
+JSON_DATA_PATH = Path('data/json')
 
 LOG_PATH = Path('logs/')
 LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
@@ -27,14 +33,28 @@ QueryParameters = Dict[str, Union[int, bool]]
 
 DataRowDict = Dict[str, Union[str, int]]
 
-RunConfigType = Dict[str, Optional[QueryParameters]]
+RunConfigType = Dict[str, Optional[Union[List, QueryParameters]]]
 
 
-def read_csv(path: str, **kwargs) -> Sequence[DataRowDict]:
+def read_csv(path: PathLike, **kwargs) -> Sequence[DataRowDict]:
     """Open `path` and return a list of dicts."""
     with open(path, **kwargs) as csv_file:
         for i, line in enumerate(DictReader(csv_file, **kwargs)):
             yield i, line
+
+
+def write_json_graph(graph: Graph, path: PathLike = JSON_DATA_PATH) -> None:
+    """Write a json file including nodes, edges and attributes."""
+    path = Path(path)
+    path.parent.mkdir(exist_ok=True, parents=True)
+    with open(path, "w") as graph_file:
+        dump(node_link_data(graph), graph_file)
+
+
+def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
+    """Read a json link_data_format file with nodes, edges and attributes."""
+    with open(path) as graph_file:
+        return node_link_graph(load(graph_file))
 
 
 def add_file_logger(logger_instance: logging.Logger = None,
