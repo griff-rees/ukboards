@@ -43,6 +43,17 @@ PUNCHDRUNK_JSON_SUBSET = ('{{"status": "active", '
 PUNCHDRUNK_DICT_SUBSET = {"status": "active",
                           "company_name": PUNCHDRUNK_COMPANY_NAME}
 
+# A CIO company
+ACCESS_COMPANY_NAME = 'ACCESS ALL AREAS'
+ACCESS_COMPANY_ID = 'CE010135'
+ACCESS_EXTERNAL_REG_ID = '1172706'
+
+ACCESS_JSON = {
+    'type': 'charitable-incorporated-organisation',
+    'company_name': ACCESS_COMPANY_ID,
+    'external_registration_numbe': ACCESS_EXTERNAL_REG_ID,
+}
+
 
 def company_url(company_id: str) -> str:
     return (COMPANIES_HOUSE_URL + '/company/' +
@@ -204,7 +215,7 @@ def test_CIO_officers_query(caplog):
 
     Currently including this option yields a 400 error.
     """
-    officers = list(get_company_officers("CE010135"))
+    officers = list(get_company_officers(ACCESS_COMPANY_ID))
     assert officers == []
 
 
@@ -477,6 +488,9 @@ def test_mock_api_get() -> Callable:
         requests_mock.get(officer_appointments_url(OFFICER_3_ID),
                           json=APPOINTMENTS_3)
 
+        requests_mock.get(company_url(ACCESS_COMPANY_ID),
+                          json=ACCESS_JSON)
+
         return get_company_network(company_id, **kwargs)
 
     return test_mock_api
@@ -586,14 +600,13 @@ class TestGetCompanyNetwork:
         assert len(caplog.records) == 4
 
     @pytest.mark.remote_data
-    @pytest.mark.xfail
     @pytest.mark.skip_if_not_allowed_ip
     def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
         # Currently this attribute doesn't get added, save for post refactor
-        company_network = get_company_network('CE010135')
+        company_network = get_company_network(ACCESS_COMPANY_ID)
         assert len(company_network) == 1
-        assert company_network.nodes['CE010135']['category'] == (
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
 
@@ -676,6 +689,27 @@ class TestGetCompanyNetwork:
         assert OFFICER_2_ID in shared_experience_board
         assert not {OFFICER_0_ID, OFFICER_1_ID} < shared_experience_board
         assert {OFFICER_1_ID, OFFICER_2_ID} == barbican_theatre_board
+        assert caplog.records == []
+
+    def test_CIO_query_status(self, requests_mock, test_mock_api_get, caplog):
+        """Test managing Charitable incorporated organisation cases."""
+        company_network = test_mock_api_get(requests_mock,
+                                            ACCESS_COMPANY_ID)
+        assert len(company_network) == 1
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
+        assert caplog.records == []
+
+    def test_CIO_filter_resigned(self, requests_mock, test_mock_api_get,
+                                 caplog):
+        """Test managing Charitable incorporated organisation cases."""
+        company_network = test_mock_api_get(
+                requests_mock,
+                ACCESS_COMPANY_ID,
+                exclude_non_active_companies=True)
+        assert len(company_network) == 1
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
 
 
@@ -805,6 +839,9 @@ def test_mock_api_class_get() -> Callable:
             controllers_individual_url(BARBICAN_THEATRE_COMPANY_ID,
                                        CONTROLLER_2_ID),
             json=BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2)
+
+        requests_mock.get(company_url(ACCESS_COMPANY_ID),
+                          json=ACCESS_JSON)
 
         cn_client = CompanyNetworkClient(**kwargs)
         return cn_client, cn_client.get_network(company_id)
@@ -1059,9 +1096,9 @@ class TestCompanyNetwork:
     def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
         cn_client = CompanyNetworkClient()
-        company_network = cn_client.get_network('CE010135')
+        company_network = cn_client.get_network(ACCESS_COMPANY_ID)
         assert len(company_network) == 1
-        assert company_network.nodes['CE010135']['category'] == (
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
 
@@ -1179,3 +1216,27 @@ class TestCompanyNetwork:
         assert not {OFFICER_0_ID, OFFICER_1_ID} < shared_experience_board
         assert {OFFICER_1_ID, OFFICER_2_ID} == barbican_theatre_board
         test_mock_caplogs(caplog, (1, 0, 3))
+
+    def test_CIO_query_status(self, requests_mock, test_mock_api_class_get,
+                              caplog):
+        """Test managing Charitable incorporated organisation cases."""
+        client, company_network = test_mock_api_class_get(
+                requests_mock,
+                ACCESS_COMPANY_ID)
+        assert len(company_network) == 1
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
+        assert caplog.records == []
+
+    def test_CIO_filter_resigned(self, requests_mock,
+                                 test_mock_api_class_get,
+                                 caplog):
+        """Test filtering Charitable incorporated organisation cases."""
+        client, company_network = test_mock_api_class_get(
+                requests_mock,
+                ACCESS_COMPANY_ID,
+                exclude_non_active_companies=True)
+        assert len(company_network) == 1
+        assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
+                COMPANIES_HOUSE_URI_CODES['CE'])
+        assert caplog.records == []

@@ -188,7 +188,7 @@ class CompanyNetworkClient:
         self.exclude_ceased_controllers = exclude_ceased_controllers
         self.compose_queried_networks = compose_queried_networks
 
-        # Initiate `` _reset_cache onsistent`` to support
+        # Initiate `` _reset_cache`` to support
         # application of ``compose_queries_required`` but worth  leaving
         # independet in some cases
         self._reset_cache = reset_cache
@@ -517,6 +517,7 @@ def get_company_network(company_id: CompanyIDType = '04547069',
         return None
     logger.debug(company['company_name'])
     g.add_node(company_id, name=company['company_name'],
+               category=get_company_category(company_id),
                bipartite=0, data=company)
     if include_officers and (
             'links' in company and
@@ -636,7 +637,8 @@ def get_company(company_id: CompanyIDType = '04547069',
         logger.error(f'Querying data on company {company_id} failed')
         return None
     if exclude_non_active_companies:
-        if company['company_status'] != 'active':
+        if (hasattr(company, "company_status") and
+                company['company_status'] != 'active'):
             logger.warning(f'Excluding company {company_id} because '
                            f'status is {company["company_status"]}. '
                            f'Company name: {company["company_name"]}')
