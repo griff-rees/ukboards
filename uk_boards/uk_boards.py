@@ -91,6 +91,7 @@ class OrganisationSequence(MutableSequence):
     _charity_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_networks_cached: bool = False
+    _charity_networks_cached: bool = False
     __company_client_class: ClassVar[Type[CompanyNetworkClient]] = (
             CompanyNetworkClient
         )
@@ -133,7 +134,9 @@ class OrganisationSequence(MutableSequence):
         if not hasattr(self, "_company_client"):
             self._company_client = (
                     self._OrganisationSequence__company_client_class(
-                        **self.company_client_params
+                        *args,
+                        **kwargs,
+                        **self.company_client_params,
                     ))
             # self.__company_client = self.__company_client_class(
             # )
@@ -157,17 +160,25 @@ class OrganisationSequence(MutableSequence):
     #     # assert False
     #     return self._company_client.get_networks(*args, **kwargs)
 
-    @property
-    def _charity_client(self,
-                        *args: QueryParameters,
-                        **kwargs: QueryParameters) -> Graph:
-        return self.__charity_client(*args, **kwargs,
-                                     **self.charity_client_params)
+    # @property
+    def charity_client(self, *args: QueryParameters,
+                       **kwargs: QueryParameters) -> Graph:
+        # pass parameters to function until refractor as client class
+        # if not hasattr(self, "_charity_client"):
+        #     self._charity_client = self._OrganisationSequence__charity_client(
+        #             *args, **kwargs, **self.charity_client_params)
+        # return self._charity_client
+        #return self._OrganisationSequence__charity_client(
+        #        *args, **kwargs, **self.charity_client_params)
+        return get_charity_network(*args, **kwargs,
+                                   **self.charity_client_params)
 
-    def _get_charity_networks(self,
-                              *args: QueryParameters,
-                              **kwargs: QueryParameters,
-                              ) -> None:
+    def _get_charity_networks_generator(self,
+                                        set_attr: bool = True,
+                                        yield_attr: bool = False,
+                                        *args: QueryParameters,
+                                        **kwargs: QueryParameters,
+                                        ) -> None:
         """Iterate organisations' ``charity_id`` and query their networks."""
         for organisation in self:
             if organisation.charity_id and (
@@ -184,16 +195,27 @@ class OrganisationSequence(MutableSequence):
                          # Params need apprasing for inclusion of locals
                          'parameter_state': self.charity_client_params,
                          'connected_components_count': None,
+                         'success': None,
                          })
 
-                network: Optional[Graph] = self._charity_client(
+                network: Optional[Graph] = self.charity_client(
                         organisation.charity_id, *args, **dict_args)
                 self._charity_runs[-1]['end_time'] = datetime.now()
                 # self._charity_runs[-1]['kinds_ids_dict']
-                self._charity_runs['connected_components_count'] = (
-                        number_connected_components(network)
-                        )
-                setattr(organisation, 'charity_network', network)
+                if network:
+                    self._charity_runs[-1]['success'] = True
+                    self._charity_runs[-1]['connected_components_count'] = (
+                            number_connected_components(network)
+                            )
+                    if set_attr:
+                        setattr(organisation, 'charity_network', network)
+                else:
+                    self._charity_runs[-1]['success'] = False
+                    self._charity_runs[-1]['connected_components_count'] = None
+            if yield_attr:
+                if hasattr(organisation, 'charity_network'):
+                    yield organisation, organisation.charity_network
+        self._charity_networks_cached = True
 
     def _get_company_networks_generator(self,
                                         set_attr: bool = True,
@@ -226,17 +248,6 @@ class OrganisationSequence(MutableSequence):
                     yield organisation, organisation.company_network
         self._company_networks_cached = True
 
-    @property
-    def charity_network(self,
-                        *args: QueryParameters,
-                        **kwargs: QueryParameters) -> Graph:
-        if not hasattr(self, '_charity_network'):
-            self._get_charity_networks(*args, **kwargs)
-            self._charity_network: Graph = compose_all(
-                    o.charity_network for o in self.organisations
-                    if hasattr(o, 'charity_network'))
-        return deepcopy(self._charity_network)
-
     def get_company_networks_generator(self,
                                        reset: bool = False,
                                        *args: QueryParameters,
@@ -244,7 +255,7 @@ class OrganisationSequence(MutableSequence):
                                        ) -> Generator[Sequence[
                                             Tuple[OrganisationEntry, Graph]],
                                                   None, None]:
-        """Return a deepcopy of a composition of all company graphs.
+        """Yield each company graph.
 
         Todo:
             * Document the set_attr and yield_attr arguments
@@ -265,6 +276,28 @@ class OrganisationSequence(MutableSequence):
         #         organisation in self if hasattr(self, 'company_network')]
         # assert False
         # return orgs
+    def get_charity_networks_generator(self,
+                                       reset: bool = False,
+                                       *args: QueryParameters,
+                                       **kwargs: QueryParameters
+                                       ) -> Generator[Sequence[
+                                            Tuple[OrganisationEntry, Graph]],
+                                                  None, None]:
+        """Yield each charity graph.
+
+        Todo:
+            * Abstract to avoid copying between companies and charities
+            * async
+        """
+        if reset:
+            self._charity_networks_cached = False
+        for organisation, network in self._get_charity_networks_generator(
+                yield_attr=True, *args, **kwargs):
+            yield organisation, network
+
+    def get_charity_networks(self, *args, **kwargs) -> Sequence[Graph]:
+        """Return list from get_charity_networks_generator."""
+        return list(self.get_charity_networks_generator(*args, **kwargs))
 
     def get_company_networks(self, *args, **kwargs) -> Sequence[Graph]:
         """Return list from get_company_networks_generator."""
@@ -285,9 +318,9 @@ class OrganisationSequence(MutableSequence):
         """
         if self._company_networks_cached:
             return compose_all(graph for _, graph in
-                               self.get_company_networks())
+                               self.get_company_networks(*args, **kwargs))
         # elif cache:
-        #     logging.warning("Caching results during query so company_network "
+        #     logging.warning("Caching results during query so company_network"
         #                     "components are increasing in size in the order "
         #                     "they are queried, in this case starting with"
         #                     f"{self[0]} and ending with {self[-1]}.")
@@ -298,12 +331,26 @@ class OrganisationSequence(MutableSequence):
                 root_company_ids=(o.company_id for o in self if o.company_id),
                 parameter_states=({'compose_queried_networks': True,
                                    '_reset_cache': False} for o in self
-                                  if o.company_id),)
+                                  if o.company_id), *args, **kwargs)
             self._company_runs.append({
                 'composed_runs': [r for r in
                                   self.company_client._runs[prior_runs:]]})
             self.company_client._parameter_state = initial_parameter_state
             return composed_graph
+
+    # @property
+    def get_composed_charity_network(self, *args: QueryParameters,
+                                     **kwargs: QueryParameters) -> Graph:
+        """Iterate over charities, compose networks and return."""
+        if not self._charity_networks_cached:
+            return compose_all(graph for _, graph in
+                               self.get_charity_networks())
+        return compose_all(n for o, n in self if hasattr(o, 'charity_network'))
+        # if not hasattr(self, '_charity_network'):
+        #     self.get_charity_networks(*args, **kwargs)
+        #     self._charity_network: Graph = compose_all(
+        #             n for o, n in self if hasattr(o, 'charity_network'))
+        # return deepcopy(self._charity_network)
 
     def get_networks(self,
                      records: Optional[int] = None,
@@ -370,4 +417,3 @@ class OrganisationSequence(MutableSequence):
         for organisation in self:
             if companies and hasattr(organisation, "company_network"):
                 pass
-

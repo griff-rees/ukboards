@@ -13,6 +13,7 @@ from typing import List, Optional
 
 from zeep import Client, Settings, Plugin
 from zeep.exceptions import Fault
+from zeep.helpers import serialize_object
 
 from .utils import DEFAULT_API_KEY_PATH
 
@@ -88,7 +89,8 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                         branches: int = 0,
                         client: Client = None,
                         api_key: str = CHARITY_COMMISSION_API_KEY,
-                        test_name: str = None) -> Optional[networkx.Graph]:
+                        test_name: str = None, *args,
+                        **kwargs) -> Optional[networkx.Graph]:
     g = networkx.Graph()
     if not client:
         client = get_client(api_key_value=api_key)
@@ -117,7 +119,8 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
     g.add_node(charity_number,
                name=charity_name,
                bipartite=0,
-               data=charity_data)  # Add a charity/company attribute
+               # Add a charity/company attribute
+               data=serialize_object(charity_data))
     logger.debug(charity_name)
     for subsidiary in range(charity_data['SubsidiaryNumber'] + 1):
         trustees = client.service.GetCharityTrustees(
@@ -136,7 +139,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
             g.add_node(trustee['TrusteeNumber'],
                        name=trustee['TrusteeName'],
                        bipartite=1,
-                       data=trustee)
+                       data=serialize_object(trustee))
             g.add_edge(charity_number,
                        trustee['TrusteeNumber'])
             if branches and trustee['RelatedCharitiesCount']:

@@ -48,7 +48,7 @@ def write_json_graph(graph: Graph, path: PathLike = JSON_DATA_PATH) -> None:
     path = Path(path)
     path.parent.mkdir(exist_ok=True, parents=True)
     with open(path, "w") as graph_file:
-        dump(node_link_data(graph), graph_file)
+        dump(node_link_data(graph), graph_file, default=str)
 
 
 def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
