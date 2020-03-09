@@ -79,6 +79,18 @@ def add_file_logger(logger_instance: logging.Logger = None,
     logger.addHandler(file_handler)
 
 
+def get_kinds_ids_dict(graph: Graph, kinds: set) -> Sequence[set]:
+    """Return a dicts of ids of each kind.
+
+    In the case of Companies House companies there are companies, board members
+    and controllers. See uk_boards.companeis.COMPANEY_NETWORK_KINDS
+    """
+    kind_dict = {k: set() for k in kinds}
+    for node_id, data in graph.nodes(data=True):
+        kind_dict[data['kind']].add(node_id)
+    return kind_dict
+
+
 class Error(Exception):
 
     """Base class for exceptions in this module.

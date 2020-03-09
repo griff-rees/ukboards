@@ -19,10 +19,11 @@ from typing import (Dict, Callable, ClassVar, Optional, Generator, List,
 
 from networkx import Graph, compose_all,  number_connected_components
 
-from .companies import CompanyNetworkClient
-from .charities import get_charity_network
-from .utils import (read_csv, add_file_logger, QueryParameters, RunConfigType,
-                    LOG_TIME_FORMAT)
+from .companies import CompanyNetworkClient, CompanyIDType
+from .charities import (get_charity_network, CharityIDType,
+                        CHARITY_NETWORK_KINDS)
+from .utils import (read_csv, add_file_logger, get_kinds_ids_dict,
+                    QueryParameters, RunConfigType, LOG_TIME_FORMAT)
 
 
 logger = logging.getLogger(__name__)
@@ -128,6 +129,26 @@ class OrganisationSequence(MutableSequence):
         return self._organisations
 
     @property
+    def charity_ids(self) -> Sequence[CharityIDType]:
+        """Return all charity ids listed in organisations.
+
+        Todo:
+            * Consider refactoring iteraction to take advantage.
+        """
+        for organisation in self:
+            yield organisation.charity_id
+
+    @property
+    def company_ids(self) -> Sequence[CompanyIDType]:
+        """Return all company ids listed in organisations.
+
+        Todo:
+            * Consider refactoring iteraction to take advantage.
+        """
+        for organisation in self:
+            yield organisation.company_id
+
+    @property
     def company_client(self,
                        *args: QueryParameters,
                        **kwargs: QueryParameters) -> Graph:
@@ -207,6 +228,8 @@ class OrganisationSequence(MutableSequence):
                     self._charity_runs[-1]['connected_components_count'] = (
                             number_connected_components(network)
                             )
+                    self._charity_runs[-1]['kinds_ids_dict'] = (
+                            get_kinds_ids_dict(network, CHARITY_NETWORK_KINDS))
                     if set_attr:
                         setattr(organisation, 'charity_network', network)
                 else:

@@ -9,7 +9,7 @@ import networkx
 
 import os
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from zeep import Client, Settings, Plugin
 from zeep.exceptions import Fault
@@ -27,6 +27,10 @@ CHARITY_COMMISSION_WSDL = ('https://apps.charitycommission.gov.uk/'
 
 CHARITY_COMMISSION_API_KEY_NAME = 'APIKey'
 CHARITY_COMMISSION_API_KEY = os.getenv("CHARITY_COMMISSION_KEY")
+
+CHARITY_NETWORK_KINDS = ('charity', 'trustee')
+
+CharityIDType = Union[str, int]
 
 
 class CharitiesAuthPlugin(Plugin):
@@ -120,6 +124,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                name=charity_name,
                bipartite=0,
                # Add a charity/company attribute
+               kind=CHARITY_NETWORK_KINDS[0],
                data=serialize_object(charity_data))
     logger.debug(charity_name)
     for subsidiary in range(charity_data['SubsidiaryNumber'] + 1):
@@ -139,6 +144,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
             g.add_node(trustee['TrusteeNumber'],
                        name=trustee['TrusteeName'],
                        bipartite=1,
+                       kind=CHARITY_NETWORK_KINDS[1],
                        data=serialize_object(trustee))
             g.add_edge(charity_number,
                        trustee['TrusteeNumber'])

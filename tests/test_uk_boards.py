@@ -5,7 +5,7 @@
 
 import pytest
 
-from networkx import connected_components, number_connected_components
+from networkx import connected_components
 
 from uk_boards.uk_boards import OrganisationSequence
 
@@ -140,18 +140,30 @@ def test_get_current_composed_company_network(current_test_orgs):
 
 @pytest.mark.remote_data
 def test_get_charity_network(current_test_orgs):
-    """Test filtering inactive charities and charity board members."""
+    """Test filtering inactive charities and charity board members.
+
+    Note:
+        * Currently charity_id seed nodes are strs.
+    """
     composed_network = current_test_orgs.get_composed_charity_network()
     assert len(composed_network) == 173
     assert len(current_test_orgs._charity_runs) == 20
-    assert number_connected_components(composed_network) == 17
+    charity_ids = set(current_test_orgs.charity_ids)
+    connected_subnets = list(connected_components(composed_network))
+    assert len(connected_subnets) == 17
+    for i, net in enumerate(connected_subnets):
+        net_charity_ids = net & charity_ids
+        if len(net_charity_ids) > 1:
+            # Booktrust and Punchdrunk (in that order)
+            assert net_charity_ids == {'313343', '1113741'}
     assert current_test_orgs._charity_runs[4]['root_charity_id'] == '1161585'
     for test_run in current_test_orgs._charity_runs:
         if test_run['root_charity_id'] not in ('1962950', '20345'):
             assert test_run['connected_components_count'] == 1
             assert test_run['success'] is True
+            assert len(test_run['kinds_ids_dict']['charity']) == 1
+            assert len(test_run['kinds_ids_dict']['trustee']) > 1
         else:
             assert test_run['connected_components_count'] is None
             assert test_run['success'] is False
         assert test_run['start_time'] < test_run['end_time']
-        assert test_run['kinds_ids_dict'] is None

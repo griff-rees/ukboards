@@ -21,6 +21,7 @@ from requests.exceptions import ConnectionError
 from .company_codes import COMPANIES_HOUSE_URI_CODES
 from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
                     QueryParameters, RunConfigType, get_external_ip_address,
+                    get_kinds_ids_dict,
                     DEFAULT_API_KEY_PATH)
 
 logger = logging.getLogger(__name__)
@@ -255,7 +256,8 @@ class CompanyNetworkClient:
                 self._graph = Graph()
                 self._officer_appointments_cache = {}
             self._get_network()
-            self._runs[-1]['kinds_ids_dict'] = get_kinds_ids_dict(self._graph)
+            self._runs[-1]['kinds_ids_dict'] = get_kinds_ids_dict(
+                    self._graph, COMPANY_NETWORK_KINDS)
             self._runs[-1]['start_time'] = self._query_start
             self._runs[-1]['end_time'] = self._query_end
             self._runs[-1]['connected_components_count'] = (
@@ -809,15 +811,6 @@ def is_person(name: str,
         if suffix in name:
             return False
     return True
-
-
-def get_kinds_ids_dict(graph: Graph,
-                       kinds: set = COMPANY_NETWORK_KINDS) -> Sequence[set]:
-    """Return ids of kinds -> (companies, board members and controllers)."""
-    kind_dict = {k: set() for k in kinds}
-    for node_id, data in graph.nodes(data=True):
-        kind_dict[data['kind']].add(node_id)
-    return kind_dict
 
 
 def filter_active_board_members(g: Graph) -> Graph:

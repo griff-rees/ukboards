@@ -20,19 +20,20 @@ from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
                                  get_company_officers,
                                  get_company_network,
-                                 get_kinds_ids_dict,
                                  is_inactive,
                                  filter_active_board_members,
                                  get_significant_controllers_data,
                                  CompanyNetworkClient,
                                  CompaniesHousePermissionError,
                                  CompanyIDType,
+                                 COMPANY_NETWORK_KINDS,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_CEASED_KEYWORD,
                                  COMPANIES_HOUSE_URL,
                                  OFFICER_LINKS_KEY)
 from uk_boards.company_codes import COMPANIES_HOUSE_URI_CODES
 from uk_boards.utils import (NegativeIntBranchException,
+                             get_kinds_ids_dict,
                              CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
                              DEFAULT_API_KEY_PATH)
 
@@ -603,7 +604,6 @@ class TestGetCompanyNetwork:
     @pytest.mark.skip_if_not_allowed_ip
     def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
-        # Currently this attribute doesn't get added, save for post refactor
         company_network = get_company_network(ACCESS_COMPANY_ID)
         assert len(company_network) == 1
         assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
@@ -1022,7 +1022,7 @@ class TestCompanyNetwork:
                 BARBICAN_THEATRE_COMPANY_NAME)
         assert len(company_network) == 8
         assert is_connected(company_network)
-        kinds_dict = get_kinds_ids_dict(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network, COMPANY_NETWORK_KINDS)
         for kind in correct_kinds:
             assert len(kinds_dict[kind]) == correct_kinds[kind]
         assert caplog.records == []
@@ -1040,7 +1040,7 @@ class TestCompanyNetwork:
                 BARBICAN_THEATRE_COMPANY_NAME)
         assert len(company_network) == 4
         assert is_connected(company_network)
-        kinds_dict = get_kinds_ids_dict(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network, COMPANY_NETWORK_KINDS)
         for kind in correct_kinds:
             assert len(kinds_dict[kind]) == correct_kinds[kind]
         assert caplog.records == []
@@ -1159,7 +1159,7 @@ class TestCompanyNetwork:
                 BARBICAN_THEATRE_COMPANY_NAME)
         assert len(company_network) == 6
         assert is_connected(company_network)
-        kinds_dict = get_kinds_ids_dict(company_network)
+        kinds_dict = get_kinds_ids_dict(company_network, COMPANY_NETWORK_KINDS)
         for kind in correct_kinds:
             assert len(kinds_dict[kind]) == correct_kinds[kind]
         test_mock_caplogs(caplog, 1)
