@@ -12,8 +12,6 @@ from datetime import datetime
 
 import logging
 
-import time
-
 from typing import (Dict, Callable, ClassVar, Optional, Generator, List,
                     Sequence, Tuple, Type, Union)
 
@@ -22,7 +20,7 @@ from networkx import Graph, compose_all,  number_connected_components
 from .companies import CompanyNetworkClient, CompanyIDType
 from .charities import (get_charity_network, CharityIDType,
                         CHARITY_NETWORK_KINDS)
-from .utils import (read_csv, add_file_logger, get_kinds_ids_dict,
+from .utils import (read_csv, file_log_handler, get_kinds_ids_dict,
                     QueryParameters, RunConfigType, LOG_TIME_FORMAT)
 
 
@@ -42,6 +40,8 @@ class OrganisationEntry:
     organisation_key_name: str = DEFAULT_ORGANISATION_COLUMN_NAME
     charity_key_name: str = DEFAULT_CHARITY_COLUMN_NAME
     company_key_name: str = DEFAULT_COMPANY_COLUMN_NAME
+    _skip_charity: str = False
+    _skip_company: str = False
 
     def __str__(self):
         return (f'{self.name}: Company {self.company_id} | '
@@ -52,6 +52,8 @@ class OrganisationEntry:
         if not hasattr(self, '_company_id'):
             if self.company_key_name in self.data:
                 self._company_id = self.data[self.company_key_name]
+            else:
+                return None
         return self._company_id
 
     @property
@@ -59,6 +61,8 @@ class OrganisationEntry:
         if not hasattr(self, '_charity_id'):
             if self.charity_key_name in self.data:
                 self._charity_id = self.data[self.charity_key_name]
+            else:
+                return None
         return self._charity_id
 
     @property
@@ -99,6 +103,14 @@ class OrganisationSequence(MutableSequence):
     # __charity_client_class  # To be added when charity query is refactored
     __charity_client: ClassVar[Callable] = get_charity_network
 
+    # def __aiter__(self):
+    #     return self
+
+    # async def __anext__(self):
+    #     raise StopAsyncIteration
+
+    # Consider internalising active_charity_ids and active_company_ids
+
     def __getitem__(self, index) -> OrganisationEntry:
         return self.organisations[index]
 
@@ -127,6 +139,20 @@ class OrganisationSequence(MutableSequence):
                     OrganisationEntry(org, **org_entry_args)
                     for _, org in self.data_reader(*args, **reader_dict_args)]
         return self._organisations
+
+    @property
+    def active_charity_ids(self) -> Sequence[CharityIDType]:
+        """Return charity ids that contingent on _skip_charity."""
+        for organisation in self:
+            if organisation.charity_id and not organisation._skip_charity:
+                yield organisation.charity_id
+
+    @property
+    def active_company_ids(self) -> Sequence[CompanyIDType]:
+        """Return company ids that contingent on _skip_company."""
+        for organisation in self:
+            if organisation.company_id and not organisation._skip_company:
+                yield organisation.company_id
 
     @property
     def charity_ids(self) -> Sequence[CharityIDType]:
@@ -189,7 +215,7 @@ class OrganisationSequence(MutableSequence):
         #     self._charity_client = self._OrganisationSequence__charity_client(
         #             *args, **kwargs, **self.charity_client_params)
         # return self._charity_client
-        #return self._OrganisationSequence__charity_client(
+        # return self._OrganisationSequence__charity_client(
         #        *args, **kwargs, **self.charity_client_params)
         return get_charity_network(*args, **kwargs,
                                    **self.charity_client_params)
@@ -197,12 +223,12 @@ class OrganisationSequence(MutableSequence):
     def _get_charity_networks_generator(self,
                                         set_attr: bool = True,
                                         yield_attr: bool = False,
-                                        *args: QueryParameters,
+                                        # *args: QueryParameters,
                                         **kwargs: QueryParameters,
                                         ) -> None:
         """Iterate organisations' ``charity_id`` and query their networks."""
         for organisation in self:
-            if organisation.charity_id and (
+            if not organisation._skip_charity and organisation.charity_id and (
                     not hasattr(organisation, 'charity_network') or
                     organisation.charity_network is None):
                 logger.info(f'Querying charity {organisation.charity_id} '
@@ -214,13 +240,14 @@ class OrganisationSequence(MutableSequence):
                          'end_time': None,
                          'kinds_ids_dict': None,
                          # Params need apprasing for inclusion of locals
-                         'parameter_state': self.charity_client_params,
+                         'parameter_state': dict_args,
                          'connected_components_count': None,
                          'success': None,
                          })
 
                 network: Optional[Graph] = self.charity_client(
-                        organisation.charity_id, *args, **dict_args)
+                        # organisation.charity_id, *args, **dict_args)
+                        organisation.charity_id, **dict_args)
                 self._charity_runs[-1]['end_time'] = datetime.now()
                 # self._charity_runs[-1]['kinds_ids_dict']
                 if network:
@@ -252,7 +279,8 @@ class OrganisationSequence(MutableSequence):
               entries.
         """
         for organisation in self:
-            if not self._company_networks_cached and (
+            if not organisation._skip_company and (
+                    not self._company_networks_cached and
                     organisation.company_id and (
                         not hasattr(organisation, 'company_network') or
                         organisation.company_network is None)):
@@ -299,6 +327,7 @@ class OrganisationSequence(MutableSequence):
         #         organisation in self if hasattr(self, 'company_network')]
         # assert False
         # return orgs
+
     def get_charity_networks_generator(self,
                                        reset: bool = False,
                                        *args: QueryParameters,
@@ -328,6 +357,8 @@ class OrganisationSequence(MutableSequence):
 
     def get_composed_company_network(self,
                                      # cache: bool = False,
+                                     records: Optional[int] = None,
+                                     start_entry: int = 0,
                                      *args: QueryParameters,
                                      **kwargs: QueryParameters,
                                      ) -> Graph:
@@ -338,6 +369,7 @@ class OrganisationSequence(MutableSequence):
             * Add option to cache this attribute on class
             * Consider adding decorator for managing parameter_states
             * Add a run summary to _company_runs
+            * Refactor to use self.company_ids
         """
         if self._company_networks_cached:
             return compose_all(graph for _, graph in
@@ -350,25 +382,35 @@ class OrganisationSequence(MutableSequence):
         else:
             initial_parameter_state = self.company_client._parameter_state
             prior_runs = len(self.company_client._runs)
+
             composed_graph = self.company_client.get_composed_network(
-                root_company_ids=(o.company_id for o in self if o.company_id),
-                parameter_states=({'compose_queried_networks': True,
-                                   '_reset_cache': False} for o in self
-                                  if o.company_id), *args, **kwargs)
+                root_company_ids=self.active_company_ids,
+                parameter_states=(
+                    {'compose_queried_networks': True, '_reset_cache': False}
+                    for o in self.active_company_ids),
+                *args, **kwargs)
+
             self._company_runs.append({
                 'composed_runs': [r for r in
                                   self.company_client._runs[prior_runs:]]})
+
             self.company_client._parameter_state = initial_parameter_state
             return composed_graph
 
     # @property
     def get_composed_charity_network(self, *args: QueryParameters,
+                                     # records: Optional[int] = None,
+                                     # start_entry: int = 0,
                                      **kwargs: QueryParameters) -> Graph:
         """Iterate over charities, compose networks and return."""
         if not self._charity_networks_cached:
-            return compose_all(graph for _, graph in
-                               self.get_charity_networks())
-        return compose_all(n for o, n in self if hasattr(o, 'charity_network'))
+            try:
+                return compose_all(graph for _, graph in
+                                   self.get_charity_networks())
+            except StopIteration:
+                logger.warning("No charity networks to compose.")
+        return compose_all(n.charity_network for n in self
+                           if hasattr(n, 'charity_network'))
         # if not hasattr(self, '_charity_network'):
         #     self.get_charity_networks(*args, **kwargs)
         #     self._charity_network: Graph = compose_all(
@@ -378,12 +420,15 @@ class OrganisationSequence(MutableSequence):
     def get_networks(self,
                      records: Optional[int] = None,
                      start_entry: int = 0,
-                     companies: bool = True,
-                     charities: bool = True,
+                     # branches: Optional[int] = None,
+                     # companies: bool = True,
+                     # charities: bool = True,
                      composed: bool = True,
                      correct_seed_graphs: bool = True,
-                     log_to_file: bool = True) -> Tuple[Optional[Graph],
-                                                        Optional[Graph]]:
+                     log_to_file: bool = True,
+                     *args: QueryParameters,
+                     **kwargs: QueryParameters) -> Tuple[Optional[Graph],
+                                                         Optional[Graph]]:
         # if logging_level:
         #     logger.setLevel(logging_level)
         # if log_path != LOG_PATH:
@@ -401,36 +446,42 @@ class OrganisationSequence(MutableSequence):
         #     csv_encoding)
         # records = records or len(organisations_list)
         if log_to_file:
-            add_file_logger()
-        start = time.localtime()
-        logger.info(f'Start: {time.strftime(LOG_TIME_FORMAT, start)}')
+            file_log_handler(logger)
+        start = datetime.now()
+        logger.info(f'Start: {start.strftime(LOG_TIME_FORMAT)}')
         if start_entry:
             logger.info(f'Beginning with record {start_entry}')
         try:
-            self._companies_network = self.get_composed_company_network()
-            # for i, organisation in enumerate(self[start_entry:records]):
-            #     if correct_seed_graphs:
-            #         self.get_company_networks()
+            if composed:
+                charity_network = self.get_composed_charity_network(*args,
+                                                                    **kwargs)
+                company_network = self.get_composed_company_network(*args,
+                                                                    **kwargs)
 
-            #     # if i % 10 is 0:
-            #     # Sort out printing timing estimates
-            #     # deciles = time.localtime()
-            #     # logger.info('Average time per organisation: {}'.format(
-            #     # ))
-            #     logger.info(f'{organisation.name:80} {i+1}/'
-            #                 f'{records-start_entry}')
-            #     # organisation._get_networks(branches)
-            #     print()
+            # if correct_seed_graphs:
+            #     charity_network = self.get_composed_company_network()
+            #     company_network = self.get_company_networks()
+
+            # self._companies_network = self.get_composed_company_network()
+            # for i, organisation in enumerate(self[start_entry:records]):
+                # if i % 10 is 0:
+                # # Sort out printing timing estimates
+                #     deciles = time.localtime()
+                #     logger.info('Average time per organisation: {}'.format(
+                #     ))
+                # logger.info(f'{organisation.name:80} {i+1}/'
+                #             f'{records - start_entry}')
+                # organisation._get_networks(branches)
+                # print()
         finally:
-            end = time.localtime()
-            logger.info(f'End: {time.strftime(LOG_TIME_FORMAT, end)}')
-            logger.info(f'Total Time: '
-                        f'{time.strftime(LOG_TIME_FORMAT, end - start)}')
+            end = datetime.now()
+            logger.info(f'End: {end.strftime(LOG_TIME_FORMAT)}')
+            logger.info(f'Total Time: {(end - start)}')
         # if pickle_path:
         #     with open(pickle_path, 'wb') as pickle_file:
         #         pickle.dump(organisations_list, pickle_file)
         # return self._company_network, self._charity_network
-        return self._company_network
+        return charity_network, company_network
 
     def write_networks(self,
                        records,

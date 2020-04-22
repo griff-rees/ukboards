@@ -20,8 +20,8 @@ from requests.exceptions import ConnectionError
 
 from .company_codes import COMPANIES_HOUSE_URI_CODES
 from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
-                    QueryParameters, RunConfigType, get_external_ip_address,
-                    get_kinds_ids_dict,
+                    ExceededMaxBranchesException, QueryParameters,
+                    RunConfigType, get_external_ip_address, get_kinds_ids_dict,
                     DEFAULT_API_KEY_PATH)
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ COMPANY_SUFFIXES = ('LTD', 'LIMITED', 'LLC',)
 
 COMPANIES_HOUSE_DATE_FORMAT = '%Y-%m-%d'
 
+COMPANIES_HOUSE_APPOINTED_KEYWORD = 'appointed_on'
 COMPANIES_HOUSE_RESIGNATION_KEYWORD = 'resigned_on'
 COMPANIES_HOUSE_CEASED_KEYWORD = 'ceased_on'
 
@@ -372,10 +373,25 @@ class CompanyNetworkClient:
     def _add_officer(self, officer_id: str, company_id: str,
                      officer_board_data: JSONDict) -> None:
         appointments_data = get_officer_appointments_data(officer_id)
-        self._officer_appointments_cache[officer_id] = {
-            appointment['appointed_to']['company_number']: appointment
-            for appointment in appointments_data['items']
-            }
+        if appointments_data and 'items' in appointments_data:
+            if self.exclude_resigned_board_members:
+                self._officer_appointments_cache[officer_id] = {
+                    appointment['appointed_to']['company_number']: appointment
+                    for appointment in appointments_data['items']
+                    if COMPANIES_HOUSE_RESIGNATION_KEYWORD not in appointment
+                }
+                resigend_board_positions_count: int = len([
+                    appointment for appointment in appointments_data['items']
+                    if COMPANIES_HOUSE_RESIGNATION_KEYWORD in appointment]
+                    )
+                logger.warning(f"Skipping {resigend_board_positions_count} "
+                               f"resigned board positions for officer "
+                               f"{officer_id}")
+            else:
+                self._officer_appointments_cache[officer_id] = {
+                    appointment['appointed_to']['company_number']: appointment
+                    for appointment in appointments_data['items']
+                }
         name = self._get_officer_name(officer_id, company_id,
                                       officer_board_data)
         self._graph.add_node(officer_id, name=name, bipartite=1,
@@ -413,9 +429,11 @@ class CompanyNetworkClient:
             getattr(self, method_name)(person_id, company_id, data)
         self._graph.add_edge(company_id, person_id, data=data)
         if 0 <= branch_iterator < self.branches:
-            self._get_network_branches(person_id, branch_iterator + 1)
+            self._get_network_branches(person_id, branch_iterator)
         elif branch_iterator < 0:
             raise NegativeIntBranchException(branch_iterator)
+        elif branch_iterator > self.branches:
+            raise ExceededMaxBranchesException(branch_iterator, self.branches)
 
     def _get_network(self,
                      company_id: str = None,
@@ -424,13 +442,13 @@ class CompanyNetworkClient:
         if company_id == self._root_company_id:
             self._query_start = datetime.now()
         logger.debug(f'Querying board network from {company_id}')
-        company_data = get_company(
+        company_data = get_company_data(
             company_id,
             exclude_non_active_companies=self.exclude_non_active_companies)
         if not company_data:
             return None
         logger.debug(company_data['company_name'])
-        company_info_dict = {'data': company_data}
+        company_info_dict = {'company': company_data}
         self._graph.add_node(company_id,
                              name=company_data['company_name'],
                              kind='company', is_person=False,
@@ -455,6 +473,8 @@ class CompanyNetworkClient:
 
         Todo:
             * Explore further branch potentials via controllers.
+            * Assess if it's better to choose whether to get more branches here
+              or in self._add_person_edge_branch
         """
         if not hasattr(self, cache_name):
             raise KeyError(f"{cache_name} not set so cannot add that branch")
@@ -462,6 +482,8 @@ class CompanyNetworkClient:
             if related_company_id not in self._graph.nodes:
                 self._get_network(related_company_id, branch_iteration + 1)
                 if self.enforce_missing_ties:
+                    logger.warning(f"Enforcing possible tie between "
+                                   f"{person_id} and {related_company_id}")
                     self._graph.add_edge(person_id, related_company_id,
                                          data=None)
 
@@ -514,7 +536,7 @@ def get_company_network(company_id: CompanyIDType = '04547069',
     """
     g = Graph()
     logger.debug(f'Querying board network from {company_id}')
-    company = get_company(company_id, **kwargs)
+    company = get_company_data(company_id, **kwargs)
     if not company:
         return None
     logger.debug(company['company_name'])
@@ -630,16 +652,16 @@ def _get_network_branches(g: Graph,
     return g
 
 
-def get_company(company_id: CompanyIDType = '04547069',
-                exclude_non_active_companies: bool = False,
-                **kwargs) -> Optional[JSONDict]:
+def get_company_data(company_id: CompanyIDType = '04547069',
+                     exclude_non_active_companies: bool = False,
+                     **kwargs) -> Optional[JSONDict]:
     company_id = stringify_company_id(company_id)
     company = companies_house_query('/company/' + company_id)
     if not company:
         logger.error(f'Querying data on company {company_id} failed')
         return None
     if exclude_non_active_companies:
-        if (hasattr(company, "company_status") and
+        if ("company_status" in company and
                 company['company_status'] != 'active'):
             logger.warning(f'Excluding company {company_id} because '
                            f'status is {company["company_status"]}. '
@@ -701,7 +723,7 @@ def get_officer_appointments_data(officer_id: str,
             f'/officers/{officer_id}/appointments')
     if not appointments:
         # Worth considering saving eact error
-        if {'company', 'company_id', 'officer_data'} <= kwargs:
+        if {'company', 'company_id', 'officer_data'} <= kwargs.keys():
             company, company_id, officer_data = (kwargs['company'],
                                                  kwargs['company_id'],
                                                  kwargs['officer_data'])

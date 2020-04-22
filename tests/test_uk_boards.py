@@ -10,6 +10,12 @@ from networkx import connected_components
 from uk_boards.uk_boards import OrganisationSequence
 
 
+BOOKTRUST_COMPANY_ID = '00210012'
+BOOKTRUST_CHARITY_ID = '313343'
+PUNCHDRUNK_COMPANY_ID = '04547069'
+PUNCHDRUNK_CHARITY_ID = '1113741'
+
+
 @pytest.fixture
 def test_orgs() -> OrganisationSequence:
     return OrganisationSequence(
@@ -30,8 +36,17 @@ def current_test_orgs(test_orgs) -> OrganisationSequence:
             'exclude_ceased_controllers': True,
             'exclude_non_active_companies': True,
             'exclude_resigned_board_members': True,
+            'include_edge_data': True,
         }
     return test_orgs
+
+
+@pytest.fixture
+def current_test_1_hop(current_test_orgs) -> OrganisationSequence:
+    # current_test_orgs.charity_client_params['branches'] = 1
+    current_test_orgs.company_client_params['branches'] = 1
+    # current_test_orgs.charity_client_params['branches'] = 1
+    return current_test_orgs
 
 
 def test_load_csv_of_organisations(test_orgs):
@@ -46,7 +61,7 @@ def test_load_csv_of_organisations(test_orgs):
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-def test_get_company_networks(test_orgs):
+def test_get_company_networks(test_orgs, caplog):
     """Test getting company_network.
 
     Todo:
@@ -63,34 +78,34 @@ def test_get_company_networks(test_orgs):
     assert len(test_orgs._company_runs[4]['kinds_ids_dict'][
             'officer']) == 14
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 488
+    assert len(composed_network) == 491
 
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-def test_get_composed_company_network(test_orgs):
+def test_get_composed_company_network(test_orgs, caplog):
     """Test getting company_network.
 
     Todo:
         * Consider avoiding deepcopy in some places
     """
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 488
+    assert len(composed_network) == 491
     assert len(test_orgs._company_runs) == 1
     assert len(test_orgs._company_runs[0]['composed_runs']) == 24
     assert test_orgs._company_runs[0]['composed_runs'][4][
             'root_company_id'] == '07007198'
     assert len(test_orgs._company_runs[0]['composed_runs'][4][
-            'kinds_ids_dict']['officer']) == 93
+            'kinds_ids_dict']['officer']) == 95
     assert len(test_orgs._company_runs[0]['composed_runs'][3][
-            'kinds_ids_dict']['officer']) == 79
+            'kinds_ids_dict']['officer']) == 81
     assert len(test_orgs._company_runs[0]['composed_runs'][4][
             'kinds_ids_dict']['company']) == 5
 
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-def test_get_current_composed_company_network(current_test_orgs):
+def test_get_current_composed_company_network(current_test_orgs, caplog):
     """Test filtering inactive companies and company board members.
 
     Note:
@@ -108,8 +123,8 @@ def test_get_current_composed_company_network(current_test_orgs):
             {'02323701'},
             {'05751540'},
             {'09265142'},
-            # Punchdrunk and Booktrust
-            {'00210012', '04547069'},
+            # Booktrust and Punchdrunk
+            {BOOKTRUST_COMPANY_ID, PUNCHDRUNK_COMPANY_ID},
             {'02748849'},
             {'05263892'},
             {'03028442'},
@@ -121,7 +136,7 @@ def test_get_current_composed_company_network(current_test_orgs):
             {'10575570'},
         ]
     composed_network = current_test_orgs.get_composed_company_network()
-    assert len(composed_network) == 179
+    assert len(composed_network) == 182
     for i, comp in enumerate(connected_components(composed_network)):
         # All company IDs are < 10 and board member IDs > 10
         assert (CORRECT_CONNECTED_COMPONENT_COMPANY_IDS[i] ==
@@ -131,22 +146,22 @@ def test_get_current_composed_company_network(current_test_orgs):
     assert current_test_orgs._company_runs[0]['composed_runs'][4][
             'root_company_id'] == '07007198'
     assert len(current_test_orgs._company_runs[0]['composed_runs'][4][
-            'kinds_ids_dict']['officer']) == 38
+            'kinds_ids_dict']['officer']) == 40
     assert len(current_test_orgs._company_runs[0]['composed_runs'][3][
-            'kinds_ids_dict']['officer']) == 26
+            'kinds_ids_dict']['officer']) == 28
     assert len(current_test_orgs._company_runs[0]['composed_runs'][4][
             'kinds_ids_dict']['company']) == 5
 
 
 @pytest.mark.remote_data
-def test_get_charity_network(current_test_orgs):
+def test_get_charity_network(current_test_orgs, caplog):
     """Test filtering inactive charities and charity board members.
 
     Note:
         * Currently charity_id seed nodes are strs.
     """
     composed_network = current_test_orgs.get_composed_charity_network()
-    assert len(composed_network) == 173
+    assert len(composed_network) == 174
     assert len(current_test_orgs._charity_runs) == 20
     charity_ids = set(current_test_orgs.charity_ids)
     connected_subnets = list(connected_components(composed_network))
@@ -167,3 +182,43 @@ def test_get_charity_network(current_test_orgs):
             assert test_run['connected_components_count'] is None
             assert test_run['success'] is False
         assert test_run['start_time'] < test_run['end_time']
+
+
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_both_no_hop(current_test_orgs, caplog):
+    """Test querying both companies and charities with no hop."""
+    for organisation in current_test_orgs:
+        # Booktrust and Punchdrunk
+        if organisation.company_id not in {BOOKTRUST_COMPANY_ID,
+                                           PUNCHDRUNK_COMPANY_ID}:
+            organisation._skip_company = True
+        if organisation.charity_id not in {BOOKTRUST_CHARITY_ID,
+                                           PUNCHDRUNK_CHARITY_ID}:
+            organisation._skip_charity = True
+    charity_network, company_network = current_test_orgs.get_networks()
+    assert len(company_network) == 22
+    assert len(current_test_orgs._company_runs) == 1
+    assert current_test_orgs._company_runs[0]['composed_runs'][
+            0]['kinds_ids_dict']['company'] == BOOKTRUST_CHARITY_ID
+    assert current_test_orgs._company_runs[0]['composed_runs'][
+            1]['kinds_ids_dict']['company'] == PUNCHDRUNK_CHARITY_ID
+    assert len(charity_network) == 20
+    assert len(current_test_orgs._charity_runs) == 2
+
+
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_one_hop(current_test_orgs, caplog):
+    """Test querying both companies and charities with 1 hop."""
+    current_test_orgs.company_client_params['branches'] = 1
+    current_test_orgs.charity_client_params['branches'] = 1
+    for organisation in current_test_orgs:
+        # Booktrust and Punchdrunk
+        if organisation.company_id not in {'210012', '04547069'}:
+            organisation._skip_company = True
+        if organisation.charity_id not in {'313343', '1113741'}:
+            organisation._skip_charity = True
+    charity_network, company_network = current_test_orgs.get_networks(
+            log_to_file=False,)
+    assert False

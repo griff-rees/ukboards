@@ -18,17 +18,21 @@ from typing import Callable, Generator, Sequence, Union
 
 from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
+                                 get_company_data,
                                  get_company_officers,
                                  get_company_network,
                                  is_inactive,
                                  filter_active_board_members,
                                  get_significant_controllers_data,
+                                 get_officer_appointments_data,
                                  CompanyNetworkClient,
                                  CompaniesHousePermissionError,
                                  CompanyIDType,
                                  COMPANY_NETWORK_KINDS,
                                  COMPANIES_HOUSE_API_KEY_NAME,
                                  COMPANIES_HOUSE_CEASED_KEYWORD,
+                                 COMPANIES_HOUSE_RESIGNATION_KEYWORD,
+                                 COMPANIES_HOUSE_APPOINTED_KEYWORD,
                                  COMPANIES_HOUSE_URL,
                                  OFFICER_LINKS_KEY)
 from uk_boards.company_codes import COMPANIES_HOUSE_URI_CODES
@@ -209,6 +213,23 @@ class TestBasicQueries:
         # assert caplog.records == []
 
 
+def test_disolved_company(requests_mock, caplog):
+    """Test querying disolved company."""
+    company_id = "04442574"
+    company_status = 'disolved'
+    company_name = 'Disolved CORP'
+
+    requests_mock.get(company_url(company_id),
+                      json={'company_status': company_status,
+                            'company_name': company_name})
+
+    output = get_company_data(company_id, exclude_non_active_companies=True)
+    assert output is None
+    assert caplog.messages[0] == (
+        f'Excluding company {company_id} because '
+        f'status is {company_status}. Company name: {company_name}')
+
+
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
 def test_CIO_officers_query(caplog):
@@ -385,6 +406,10 @@ LOG_PREFIXES_429 = (
     'Status code 502 from ',
 )
 
+LOG_IDENTIFYING_CHARACTERS = (
+    ' resigned board positions for officer ',
+)
+
 
 # Todo: replace this with ``generate_mock_logs_sequence``
 BARBICAN_ONE_HOP_LOGS = [
@@ -415,14 +440,20 @@ def barbican_one_hop_caplog_tests(
         assert BARBICAN_ONE_HOP_LOGS[i] == message
 
 
-def filter_caplogs_by_prefix(messages: list,
-                             prefixes: Sequence[str] = LOG_PREFIXES_429,
-                             ) -> Generator[str, None, None]:
+def filter_caplogs_by_prefix(
+        messages: list,
+        prefixes: Sequence[str] = LOG_PREFIXES_429,
+        mid_strings: Sequence[str] = LOG_IDENTIFYING_CHARACTERS,
+        ) -> Generator[str, None, None]:
     """Filter caplogs that begin with ``prefixes`` (default 429 errors)."""
     for message in messages:
         include = True
         for prefix in prefixes:
             if message.startswith(prefix):
+                include = False
+                break
+        for string in mid_strings:
+            if string in message:
                 include = False
                 break
         if include:
@@ -711,6 +742,36 @@ class TestGetCompanyNetwork:
         assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
+
+
+# As of 3 March 2020 company 04101324 has a board member id with no
+# separate appointments data.
+
+ERROR_404_EXAMPLE_OFFICER_ID = 'cixLzRUyLQlKngf_6GagwyA_D-0'
+COMPANY_WITH_404_EXAMPLE_OFFICER = '04101324'
+
+
+@pytest.mark.skip_if_not_allowed_ip
+@pytest.mark.remote_data
+def test_missing_officer_appointments_data(caplog):
+    """Test cases where kwargs don't include company data.
+
+    Example edge case where additional datat for preferred error message is not
+    available.
+    """
+    error_query_url = f'/officers/{ERROR_404_EXAMPLE_OFFICER_ID}/appointments'
+    ERROR_MESSAGES = [
+        f'Status code 404 from {error_query_url}',
+        f'Skipping {error_query_url}',
+        ('Error requesting appointments of board member ' +
+            ERROR_404_EXAMPLE_OFFICER_ID)
+
+    ]
+    missing_data_example = get_officer_appointments_data(
+            ERROR_404_EXAMPLE_OFFICER_ID)
+    assert missing_data_example is None
+    for i, message in enumerate(caplog.messages):
+        assert message == ERROR_MESSAGES[i]
 
 
 def basic_client_officer_tests(company_network: Graph) -> None:
@@ -1030,7 +1091,7 @@ class TestCompanyNetwork:
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_client_basic_only_controllers(self, caplog):
-        """Test a simple query of Barbican Theatre board members"""
+        """Test a simple query of Barbican Theatre board members."""
         correct_kinds = {'company': 1, 'controller': 3}
         client = CompanyNetworkClient(include_significant_controllers=True,
                                       include_officers=False)
@@ -1044,6 +1105,32 @@ class TestCompanyNetwork:
         for kind in correct_kinds:
             assert len(kinds_dict[kind]) == correct_kinds[kind]
         assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_client_1_branch_filter_resigned_and_disolved(self, caplog,
+                                                          test_1_hop_fixture):
+        """1 branch Punchdrunk of current active officers and companies.
+
+        Todo:
+            * Consider altering data['data'] structure
+        """
+        cn_client = CompanyNetworkClient(branches=1,
+                                         exclude_resigned_board_members=True,
+                                         exclude_non_active_companies=True,
+                                         include_edge_data=True)
+        company_network = cn_client.get_network(PUNCHDRUNK_COMPANY_ID)
+        assert "04442574" not in company_network  # Disolved company 16/3/2020
+        assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
+                PUNCHDRUNK_COMPANY_NAME)
+        assert len(company_network) == 130
+        assert is_connected(company_network)
+        for company_id in cn_client._runs[0]['kinds_ids_dict']['company']:
+            assert (company_network.nodes[company_id]['data'][
+                    'company']['company_status'] == 'active')
+        for i, j, data in company_network.edges(data=True):
+            assert COMPANIES_HOUSE_APPOINTED_KEYWORD in data['data']
+            assert COMPANIES_HOUSE_RESIGNATION_KEYWORD not in data['data']
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
@@ -1090,6 +1177,33 @@ class TestCompanyNetwork:
             assert officer_id in barbican_theatre_net
             assert officer_id not in shared_experience_net
         barbican_one_hop_caplog_tests(caplog)
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_client_missing_officer_data(self, caplog):
+        """Example case of company board memeber with no appointment data.
+
+        Todo:
+            * Reproduce without api call
+        """
+        CORRECT_NODE = {'bipartite': 1, 'kind': 'officer', 'is_person': True,
+                        'data': None}
+        client = CompanyNetworkClient(exclude_resigned_board_members=True)
+        company_network = client.get_network(COMPANY_WITH_404_EXAMPLE_OFFICER)
+        companies, board_members = bipartite.sets(company_network)
+        assert len(companies) == 1
+        assert len(board_members) == 10
+        assert is_connected(company_network)
+        assert ERROR_404_EXAMPLE_OFFICER_ID in company_network
+        for key, value in CORRECT_NODE.items():
+            assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
+                    key] == value
+        # Ensure the name allocated comes from the edge data available
+        assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
+                'name'] == company_network[
+                        ERROR_404_EXAMPLE_OFFICER_ID][
+                                COMPANY_WITH_404_EXAMPLE_OFFICER][
+                                        'data']['name']
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
@@ -1240,3 +1354,19 @@ class TestCompanyNetwork:
         assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
+
+    def test_filter_resigned_1_hop(self, requests_mock,
+                                   test_mock_api_class_get,
+                                   caplog):
+        """Test skipping board hops if board members not active on them."""
+        client, company_network = test_mock_api_class_get(
+                requests_mock, SHARED_EXPERIENCE_COMPANY_ID, branches=1,
+                exclude_resigned_board_members=True)
+        assert BARBICAN_THEATRE_COMPANY_ID not in company_network.nodes
+        assert len(company_network) == 2
+        assert is_connected(company_network)
+        assert caplog.messages == [
+            'Skipping 1 resigned board positions for officer an-officer-id',
+            "No 'name' data available for officer "
+            "FOURTH, Four First Name (an-officer-id) in appointments_cache"
+        ]

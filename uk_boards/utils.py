@@ -3,6 +3,8 @@
 
 from csv import DictReader
 
+from datetime import datetime
+
 from json import dump, load
 
 import logging
@@ -24,8 +26,12 @@ DEFAULT_API_KEY_PATH = Path('.env')
 
 JSON_DATA_PATH = Path('data/json')
 
-LOG_PATH = Path('logs/')
+LOG_FOLDER = Path('logs/')
 LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
+LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
+DEFAULT_LOG_FILE_NAME = (
+    f"default_{datetime.now().strftime(LOG_FILENAME_DATE_FORMAT)}.log"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,26 +63,23 @@ def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
         return node_link_graph(load(graph_file))
 
 
-def add_file_logger(logger_instance: logging.Logger = None,
-                    logging_level: Optional[int] = logging.INFO,
-                    log_path: PathLike = LOG_PATH,
-                    reset_log: bool = True):
+def file_log_handler(level: Optional[int] = logging.INFO,
+                     filename: PathLike = DEFAULT_LOG_FILE_NAME,
+                     folder: PathLike = LOG_FOLDER,
+                     reset_log: bool = True) -> logging.FileHandler:
     """Add a file logger."""
-    if not logger_instance:
-        logger_instance = logging.Logger()
-    if logging_level:
-        logger_instance.setLevel(logging_level)
+    # logger_instance = logging.Logger()
+    # logger_instance.setLevel(level)
     # if log_path != LOG_PATH:
-        # logging_level = logging_level or logging.DEBUG
-    if type(log_path) == str:
-        log_path = Path(log_path)
+    # logging_level = logging_level or logging.DEBUG
+    log_path = Path(folder) / filename
     log_path.parent.mkdir(exist_ok=True, parents=True)
     if reset_log:
         file_handler = logging.FileHandler(log_path, mode='w')
     else:
         file_handler = logging.FileHandler(log_path)
-    file_handler.setLevel(logging_level)
-    logger.addHandler(file_handler)
+    file_handler.setLevel(level)
+    return file_handler
 
 
 def get_kinds_ids_dict(graph: Graph, kinds: set) -> Sequence[set]:
@@ -112,6 +115,24 @@ class NegativeIntBranchException(Error):
         self.message = message or (f"{branches} is an invalid number of "
                                    "network branches. It must be an int "
                                    "and > 0.")
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class ExceededMaxBranchesException(Error):
+
+    """Error of a branch being a non-integer and/or less than 0."""
+
+    def __init__(self, branches: int,
+                 max_branches: int,
+                 message: str = None,
+                 ) -> None:
+        self.branches: int = branches
+        self.max_branches: int = max_branches
+        self.message: str = message or (f"Current branches {branches} >= "
+                                        f"maximum {max_branches} branches "
+                                        "allowed.")
 
     def __str__(self) -> str:
         return self.message

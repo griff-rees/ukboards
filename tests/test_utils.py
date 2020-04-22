@@ -7,9 +7,7 @@ import logging
 
 from networkx import Graph
 
-import pytest
-
-from uk_boards.utils import (read_csv, add_file_logger, read_json_graph,
+from uk_boards.utils import (read_csv, file_log_handler, read_json_graph,
                              write_json_graph)
 
 
@@ -38,18 +36,40 @@ def test_read_write_graph(tmp_path):
     assert list(g.edges(data=True)) == list(f.edges(data=True))
 
 
-@pytest.mark.xfail
-def test_add_file_logger(tmp_path):
+def test_add_file_logger(tmp_path, caplog):
     """Test adding a file logger."""
-    INFO_LOG_TEXT = "A debug level log."
-    DEBUG_LOG_TEXT = "An info level log."
-    test_path = tmp_path / 'test_logs'
-    add_file_logger(logger,
-                    logging_level=logging.DEBUG,
-                    log_path=test_path,
-                    # reset_cache=False
-                    )
-    logger.info(INFO_LOG_TEXT)
-    logger.debug(DEBUG_LOG_TEXT)
-    assert INFO_LOG_TEXT in test_path.read_text()
-    assert False
+    test_logger = logging.getLogger("test_logger")
+    test_logger.setLevel(logging.DEBUG)
+
+    INFO_LOG_TEXT = "An info level log."
+    DEBUG_LOG_TEXT = "A debug level log."
+    TEST_FILENAME = 'test_log_name.log'
+    path_test = tmp_path / TEST_FILENAME
+
+    file_handler = file_log_handler(level=logging.INFO,
+                                    filename=TEST_FILENAME,
+                                    folder=tmp_path,
+                                    )
+    test_logger.addHandler(file_handler)
+    test_logger.info(INFO_LOG_TEXT)
+    test_logger.debug(DEBUG_LOG_TEXT)
+    log_text = path_test.read_text()
+    assert INFO_LOG_TEXT + '\n' == log_text
+    assert DEBUG_LOG_TEXT not in log_text
+    file_handler2 = file_log_handler(level=logging.DEBUG,
+                                     filename=TEST_FILENAME,
+                                     folder=tmp_path,
+                                     )
+    test_logger.addHandler(file_handler2)
+    test_logger.info(INFO_LOG_TEXT)
+    test_logger.debug(DEBUG_LOG_TEXT)
+    log_text = path_test.read_text()
+    assert log_text == f'{INFO_LOG_TEXT}\n{DEBUG_LOG_TEXT}\n'
+    file_handler3 = file_log_handler(level=logging.DEBUG,
+                                     filename=TEST_FILENAME,
+                                     folder=tmp_path,
+                                     reset_log=True,
+                                     )
+    test_logger.addHandler(file_handler3)
+    log_text = path_test.read_text()
+    assert log_text == ""
