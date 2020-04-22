@@ -478,14 +478,17 @@ class CompanyNetworkClient:
         """
         if not hasattr(self, cache_name):
             raise KeyError(f"{cache_name} not set so cannot add that branch")
-        for related_company_id in getattr(self, cache_name)[person_id]:
-            if related_company_id not in self._graph.nodes:
-                self._get_network(related_company_id, branch_iteration + 1)
-                if self.enforce_missing_ties:
-                    logger.warning(f"Enforcing possible tie between "
-                                   f"{person_id} and {related_company_id}")
-                    self._graph.add_edge(person_id, related_company_id,
-                                         data=None)
+        try:
+            for related_company_id in getattr(self, cache_name)[person_id]:
+                if related_company_id not in self._graph.nodes:
+                    self._get_network(related_company_id, branch_iteration + 1)
+                    if self.enforce_missing_ties:
+                        logger.warning(f"Enforcing possible tie between "
+                                       f"{person_id} and {related_company_id}")
+                        self._graph.add_edge(person_id, related_company_id,
+                                             data=None)
+        except KeyError:
+            logger.warning(f"No branch data from {person_id}")
 
 
 def get_company_network(company_id: CompanyIDType = '04547069',

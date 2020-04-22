@@ -1207,6 +1207,36 @@ class TestCompanyNetwork:
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
+    def test_client_missing_officer_data_1_hop(self, caplog):
+        """Example case of company board memeber with no appointment data.
+
+        Todo:
+            * Reproduce without api call
+        """
+        CORRECT_NODE = {'bipartite': 1, 'kind': 'officer', 'is_person': True,
+                        'data': None}
+        client = CompanyNetworkClient(exclude_resigned_board_members=True,
+                                      branches=1)
+        company_network = client.get_network(COMPANY_WITH_404_EXAMPLE_OFFICER)
+        companies, board_members = bipartite.sets(company_network)
+        assert len(companies) == 10
+        assert len(board_members) == 46
+        assert is_connected(company_network)
+        assert ERROR_404_EXAMPLE_OFFICER_ID in company_network
+        for key, value in CORRECT_NODE.items():
+            assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
+                    key] == value
+        # Ensure the name allocated comes from the edge data available
+        assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
+                'name'] == company_network[
+                        ERROR_404_EXAMPLE_OFFICER_ID][
+                                COMPANY_WITH_404_EXAMPLE_OFFICER][
+                                        'data']['name']
+        assert (f"No branch data from "
+                f"{ERROR_404_EXAMPLE_OFFICER_ID}") in caplog.messages
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
     def test_CIO_company(self, caplog):
         """Test managing Charitable incorporated organisation cases."""
         cn_client = CompanyNetworkClient()
