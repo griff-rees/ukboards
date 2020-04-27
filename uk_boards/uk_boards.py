@@ -4,13 +4,13 @@
 
 from collections.abc import MutableSequence
 
-from copy import deepcopy
-
 from dataclasses import dataclass, field
 
 from datetime import datetime
 
-import logging
+from logging import getLogger
+
+from os import PathLike
 
 from typing import (Dict, Callable, ClassVar, Optional, Generator, List,
                     Sequence, Tuple, Type, Union)
@@ -24,7 +24,7 @@ from .utils import (read_csv, file_log_handler, get_kinds_ids_dict,
                     QueryParameters, RunConfigType, LOG_TIME_FORMAT)
 
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 DEFAULT_COMPANY_COLUMN_NAME = 'Company'
 DEFAULT_CHARITY_COLUMN_NAME = 'Charity'
@@ -92,6 +92,7 @@ class OrganisationSequence(MutableSequence):
     organisation_entry_params: Dict[str, str] = field(default_factory=dict)
     company_client_params: QueryParameters = field(default_factory=dict)
     charity_client_params: QueryParameters = field(default_factory=dict)
+    log_params: QueryParameters = field(default_factory=dict)
     reset_logs: bool = True
     _charity_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_runs: Sequence[RunConfigType] = field(default_factory=list)
@@ -217,8 +218,9 @@ class OrganisationSequence(MutableSequence):
         # return self._charity_client
         # return self._OrganisationSequence__charity_client(
         #        *args, **kwargs, **self.charity_client_params)
-        return get_charity_network(*args, **kwargs,
-                                   **self.charity_client_params)
+        return get_charity_network(*args,
+                                   **{**kwargs,
+                                      **self.charity_client_params})
 
     def _get_charity_networks_generator(self,
                                         set_attr: bool = True,
@@ -425,7 +427,7 @@ class OrganisationSequence(MutableSequence):
                      # charities: bool = True,
                      composed: bool = True,
                      correct_seed_graphs: bool = True,
-                     log_to_file: bool = True,
+                     log_file: bool = True,
                      *args: QueryParameters,
                      **kwargs: QueryParameters) -> Tuple[Optional[Graph],
                                                          Optional[Graph]]:
@@ -445,8 +447,9 @@ class OrganisationSequence(MutableSequence):
         #     organisations_list = get_organisations_list(csv_path,
         #     csv_encoding)
         # records = records or len(organisations_list)
-        if log_to_file:
-            file_log_handler(logger)
+        if log_file:
+            logger.addHandler(
+                    file_log_handler(*args, **{**kwargs, **self.log_params}))
         start = datetime.now()
         logger.info(f'Start: {start.strftime(LOG_TIME_FORMAT)}')
         if start_entry:
@@ -484,10 +487,9 @@ class OrganisationSequence(MutableSequence):
         return charity_network, company_network
 
     def write_networks(self,
-                       records,
-                       start_entry,
-                       companies,
-                       charities, path) -> None:
+                       chaities: bool = True,
+                       companies: bool = True,
+                       path: PathLike = None) -> None:
         for organisation in self:
             if companies and hasattr(organisation, "company_network"):
                 pass

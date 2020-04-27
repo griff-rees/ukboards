@@ -66,12 +66,13 @@ def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
 def file_log_handler(level: Optional[int] = logging.INFO,
                      filename: PathLike = DEFAULT_LOG_FILE_NAME,
                      folder: PathLike = LOG_FOLDER,
-                     reset_log: bool = True) -> logging.FileHandler:
-    """Add a file logger."""
-    # logger_instance = logging.Logger()
-    # logger_instance.setLevel(level)
-    # if log_path != LOG_PATH:
-    # logging_level = logging_level or logging.DEBUG
+                     reset_log: bool = True,
+                     *args, **kwargs) -> logging.FileHandler:
+    """Add a file logger.
+
+    Todo:
+        * Consider generalising to type of handler.
+    """
     log_path = Path(folder) / filename
     log_path.parent.mkdir(exist_ok=True, parents=True)
     if reset_log:

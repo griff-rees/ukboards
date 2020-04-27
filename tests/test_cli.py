@@ -27,6 +27,7 @@ Options:
   -a, --api-keys-path FILE  Path to file with API keys (default=.env)
   -i, --indent INTEGER      How many spaces to indent printing json queries.
                             [default: 2]
+
   --help                    Show this message and exit.
 
 Commands:
@@ -48,7 +49,11 @@ def convert_output_string(output: str) -> str:
 
 class TestMainCommandLineInterface:
 
-    """Test uk_boards root command line interface."""
+    """Test uk_boards root command line interface.
+
+    Todo:
+        * Add options for processing CSV files from the command line.
+    """
 
     def test_command_line_interface(self, cli_runner):
         """Test the CLI."""

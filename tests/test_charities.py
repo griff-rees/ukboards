@@ -195,3 +195,13 @@ class TestGetCharityNetwork:
         assert is_connected(charity_network)
         tate_foundation, board_members = bipartite.sets(charity_network)
         assert len(board_members) == 14
+
+    @pytest.mark.remote_data
+    def test_1hop_tate(self, history_client):
+        """Test 1 hop query of Tate_Foundation board members."""
+        charity_network = get_charity_network(1085314, branches=1,
+                                              client=history_client)
+        assert len(charity_network) == 67
+        assert is_connected(charity_network)
+        tate_foundation, board_members = bipartite.sets(charity_network)
+        assert len(board_members) == 59

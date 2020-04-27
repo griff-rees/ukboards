@@ -157,7 +157,8 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                     if charity['CharityNumber'] not in g.nodes:
                         subgraph = get_charity_network(
                             charity['CharityNumber'], branches - 1,
-                            client=client, test_name=charity['CharityName'])
+                            client=client, test_name=charity['CharityName'],
+                            *args, **kwargs)
                         assert networkx.is_bipartite(subgraph)
                         g = networkx.compose(g, subgraph)
                         assert networkx.is_bipartite(g)
