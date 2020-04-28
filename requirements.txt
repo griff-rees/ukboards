@@ -1,4 +1,4 @@
-Click==7.0
+Click==7.1.2
 networkx==2.4
 requests==2.23.0
 zeep==3.4.0
