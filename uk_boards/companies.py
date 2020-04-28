@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from copy import deepcopy
 from datetime import datetime
 import logging
 import os
@@ -265,7 +264,7 @@ class CompanyNetworkClient:
                     number_connected_components(self._graph)
                     )
 
-        return deepcopy(self._graph)
+        return self._graph
 
     def networks_generator(self,
                            root_company_ids: Sequence[CompanyIDType],
@@ -280,7 +279,7 @@ class CompanyNetworkClient:
     def get_composed_network(self, *args, **kwargs):
         """Iterate over querires then return self._graph."""
         [g for g in self.networks_generator(*args, **kwargs)]
-        return deepcopy(self._graph)
+        return self._graph
 
     async def async_networks_generator(
             self,
@@ -296,7 +295,7 @@ class CompanyNetworkClient:
     async def async_get_composed_network(self, *args, **kwargs) -> Graph:
         """Async iterate over querires then return self._graph."""
         [g async for g in self.async_networks_generator(*args, **kwargs)]
-        return deepcopy(self._graph)
+        return self._graph
 
     def _get_officer_name(self,
                           officer_id: str,
