@@ -9,10 +9,11 @@ from logging import DEBUG
 
 import pytest
 
-from networkx import connected_components
+from networkx import Graph, connected_components
 
 from uk_boards.uk_boards import OrganisationSequence
-from uk_boards.utils import DEFAULT_LOG_FILE_NAME
+from uk_boards.utils import (DEFAULT_LOG_FILE_NAME, call_node_func,
+                             ordinance_wrapper)
 
 
 BOOKTRUST_COMPANY_ID = '00210012'
@@ -95,7 +96,7 @@ def test_get_company_networks(test_orgs, caplog):
     assert len(test_orgs._company_runs[4]['kinds_ids_dict'][
             'officer']) == 14
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 491
+    assert len(composed_network) == 492
 
 
 @pytest.mark.remote_data
@@ -107,15 +108,15 @@ def test_get_composed_company_network(test_orgs, caplog):
         * Consider avoiding deepcopy in some places
     """
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 491
+    assert len(composed_network) == 492
     assert len(test_orgs._company_runs) == 1
     assert len(test_orgs._company_runs[0]['composed_runs']) == 24
     assert test_orgs._company_runs[0]['composed_runs'][4][
             'root_company_id'] == '07007198'
     assert len(test_orgs._company_runs[0]['composed_runs'][4][
-            'kinds_ids_dict']['officer']) == 95
+            'kinds_ids_dict']['officer']) == 96
     assert len(test_orgs._company_runs[0]['composed_runs'][3][
-            'kinds_ids_dict']['officer']) == 81
+            'kinds_ids_dict']['officer']) == 82
     assert len(test_orgs._company_runs[0]['composed_runs'][4][
             'kinds_ids_dict']['company']) == 5
 
@@ -153,7 +154,7 @@ def test_get_current_composed_company_network(current_test_orgs, caplog):
             {'10575570'},
         ]
     composed_network = current_test_orgs.get_composed_company_network()
-    assert len(composed_network) == 182
+    assert len(composed_network) == 183
     for i, comp in enumerate(connected_components(composed_network)):
         # All company IDs are < 10 and board member IDs > 10
         assert (CORRECT_CONNECTED_COMPONENT_COMPANY_IDS[i] ==
@@ -163,9 +164,9 @@ def test_get_current_composed_company_network(current_test_orgs, caplog):
     assert current_test_orgs._company_runs[0]['composed_runs'][4][
             'root_company_id'] == '07007198'
     assert len(current_test_orgs._company_runs[0]['composed_runs'][4][
-            'kinds_ids_dict']['officer']) == 40
+            'kinds_ids_dict']['officer']) == 41
     assert len(current_test_orgs._company_runs[0]['composed_runs'][3][
-            'kinds_ids_dict']['officer']) == 28
+            'kinds_ids_dict']['officer']) == 29
     assert len(current_test_orgs._company_runs[0]['composed_runs'][4][
             'kinds_ids_dict']['company']) == 5
 
@@ -178,7 +179,7 @@ def test_get_charity_network(current_test_orgs, caplog):
         * Currently charity_id seed nodes are strs.
     """
     composed_network = current_test_orgs.get_composed_charity_network()
-    assert len(composed_network) == 174
+    assert len(composed_network) == 176
     assert len(current_test_orgs._charity_runs) == 20
     charity_ids = set(current_test_orgs.charity_ids)
     connected_subnets = list(connected_components(composed_network))
@@ -250,7 +251,7 @@ def test_one_hop(current_test_orgs, caplog):
         if organisation.charity_id not in {'313343', '1113741'}:
             organisation._skip_charity = True
     charity_network, company_network = current_test_orgs.get_networks()
-    assert len(company_network) == 206
+    assert len(company_network) == 209
     assert len(current_test_orgs._company_runs) == 1
     assert current_test_orgs._company_runs[0]['composed_runs'][
             1]['kinds_ids_dict']['company'] == {
@@ -264,5 +265,62 @@ def test_one_hop(current_test_orgs, caplog):
     assert current_test_orgs._company_runs[0]['composed_runs'][0][
             'kinds_ids_dict']['company'] < current_test_orgs._company_runs[0][
                     'composed_runs'][1]['kinds_ids_dict']['company']
-    assert len(charity_network) == 77
+    assert len(charity_network) == 83
     assert len(current_test_orgs._charity_runs) == 2
+
+
+def test_ordinance_company_wrapper(current_test_orgs):
+    """Test setting ordinance data for a company network."""
+    OFFICER_0_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
+    for organisation in current_test_orgs:
+        if organisation.company_id != PUNCHDRUNK_COMPANY_ID:
+            organisation._skip_company = True
+    company_network: Graph = current_test_orgs.get_composed_company_network()
+    call_node_func(company_network, ordinance_wrapper)
+    assert company_network.nodes[
+            PUNCHDRUNK_COMPANY_ID]['post_code'] == 'N17 9LH'
+    assert company_network.nodes[
+            PUNCHDRUNK_COMPANY_ID]['ordinance']['quality'] == 1
+    assert company_network.nodes[
+            PUNCHDRUNK_COMPANY_ID]['address'][
+                    'address_line_1'] == 'Cannon Factory'
+    assert company_network.nodes[
+            PUNCHDRUNK_COMPANY_ID]['latitude'] == 51.590792
+    assert company_network.nodes[
+            PUNCHDRUNK_COMPANY_ID]['longitude'] == -0.06056
+    assert company_network.nodes[
+            OFFICER_0_ID]['post_code'] == 'N17 9LH'
+    assert company_network.nodes[
+            OFFICER_0_ID]['ordinance']['quality'] == 1
+    assert company_network.nodes[
+            OFFICER_0_ID]['address'][
+                    'address_line_1'] == 'Ashley Road'
+    assert company_network.nodes[
+            OFFICER_0_ID]['latitude'] == 51.590792
+    assert company_network.nodes[
+            OFFICER_0_ID]['longitude'] == -0.06056
+
+
+def test_ordinance_charity_wrapper(current_test_orgs):
+    """Test setting ordinance data for a charity network."""
+    TRUSTEE = 11589843
+    for organisation in current_test_orgs:
+        if organisation.charity_id != PUNCHDRUNK_CHARITY_ID:
+            organisation._skip_charity = True
+    charity_network: Graph = current_test_orgs.get_composed_charity_network()
+    call_node_func(charity_network, ordinance_wrapper)
+    assert charity_network.nodes[
+            PUNCHDRUNK_CHARITY_ID]['post_code'] == 'N17 9LH'
+    assert charity_network.nodes[
+            PUNCHDRUNK_CHARITY_ID]['ordinance']['quality'] == 1
+    assert charity_network.nodes[
+            PUNCHDRUNK_CHARITY_ID]['address']['Line1'] == 'Cannon Factory'
+    assert charity_network.nodes[
+            PUNCHDRUNK_CHARITY_ID]['latitude'] == 51.590792
+    assert charity_network.nodes[
+            PUNCHDRUNK_CHARITY_ID]['longitude'] == -0.06056
+    assert charity_network.nodes[TRUSTEE]['post_code'] is None
+    assert charity_network.nodes[TRUSTEE]['ordinance'] is None
+    assert charity_network.nodes[TRUSTEE]['address'] is None
+    assert charity_network.nodes[TRUSTEE]['latitude'] is None
+    assert charity_network.nodes[TRUSTEE]['longitude'] is None

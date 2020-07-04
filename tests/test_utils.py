@@ -4,11 +4,14 @@
 """Test utils."""
 
 import logging
+from typing import Dict
 
 from networkx import Graph
 
 from uk_boards.utils import (read_csv, file_log_handler, read_json_graph,
-                             write_json_graph)
+                             write_json_graph, formatted_now_str,
+                             get_ordinance_data, set_node_data_func,
+                             DEFAULT_LOG_FILE_NAME, POSTCODE_IO)
 
 
 logger = logging.getLogger(__name__)
@@ -73,3 +76,45 @@ def test_add_file_logger(tmp_path, caplog):
     test_logger.addHandler(file_handler3)
     log_text = path_test.read_text()
     assert log_text == ""
+
+
+def test_query_address(requests_mock, caplog):
+    """Test querying ordinance data from punchdrunk postcode."""
+    LAT: float = 51.590792
+    LON: float = -0.06056
+    POSTCODE = "N17 9LH"
+    URL_CONVERTED_POSTCODE = POSTCODE.replace(" ", '%20')
+    response = {
+            "postcode": POSTCODE, "quality": 1, "eastings": 534449,
+            "northings": 189775, "country": "England", "nhs_ha": "London",
+            "longitude": LON, "latitude": LAT,
+            "european_electoral_region": "London",
+        }
+    requests_mock.get(POSTCODE_IO + URL_CONVERTED_POSTCODE, json=response)
+    ordinance_data = get_ordinance_data(POSTCODE).json()
+    assert ordinance_data['postcode'] == POSTCODE
+    assert ordinance_data["latitude"] == LAT
+    assert ordinance_data["longitude"] == LON
+
+
+def test_set_node_data_func():
+    """Test setting a new component of data in a network."""
+    g: Graph = Graph()
+    ATTR_NAME: str = '9times'
+    g.add_nodes_from([1, 2])
+
+    def n_times_9(n: int, data: Dict) -> int:
+        return n*9
+
+    set_node_data_func(g, ATTR_NAME, n_times_9)
+    assert list(g.nodes(data=True)) == [(1, {ATTR_NAME: 9}),
+                                        (2, {ATTR_NAME: 18})]
+
+
+def test_formatted_now_str():
+    """Test returning formatted str of current dateime."""
+    name_1 = f'default_{formatted_now_str()}.log'  # Later because of import
+    name_2 = DEFAULT_LOG_FILE_NAME  # Early because of the import
+    assert name_1[:17] == name_2[:17]
+    assert name_1[27:] == name_2[27:] == '.log'
+    assert name_1[17:27] >= name_2[17:27]

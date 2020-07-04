@@ -15,12 +15,14 @@ from os import PathLike
 
 from pathlib import Path
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import requests
 from requests.exceptions import ConnectionError
 
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
+
+POSTCODE_IO = 'https://api.postcodes.io/postcodes/'
 
 DEFAULT_API_KEY_PATH = Path('.env')
 
@@ -29,9 +31,6 @@ JSON_DATA_PATH = Path('data/json')
 LOG_FOLDER = Path('logs/')
 LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
 LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
-DEFAULT_LOG_FILE_NAME = (
-    f"default_{datetime.now().strftime(LOG_FILENAME_DATE_FORMAT)}.log"
-)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,17 @@ QueryParameters = Dict[str, Union[int, bool]]
 
 DataRowDict = Dict[str, Union[str, int]]
 
+JSONDict = Dict[str, Any]
+
 RunConfigType = Dict[str, Optional[Union[List, QueryParameters]]]
+
+
+def formatted_now_str(date_format: str = LOG_FILENAME_DATE_FORMAT):
+    """Return current time in ``date_format`` format."""
+    return datetime.now().strftime(date_format)
+
+
+DEFAULT_LOG_FILE_NAME = f"default_{formatted_now_str()}.log"
 
 
 def read_csv(path: PathLike, **kwargs) -> Sequence[DataRowDict]:
@@ -61,6 +70,62 @@ def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
     """Read a json link_data_format file with nodes, edges and attributes."""
     with open(path) as graph_file:
         return node_link_graph(load(graph_file))
+
+
+def get_ordinance_data(post_code: str) -> requests.Response:
+    """Request ordinance survey data from postcodes.io."""
+    try:
+        return requests.get(POSTCODE_IO + post_code)
+    except ConnectionError:
+        raise InternetConnectionError
+
+
+def ordinance_wrapper(node_key: Union[int, str, float], data: JSONDict):
+    """Call ``get_ordinance_data`` on data and return a tuple with node_key."""
+    address: Optional[Dict[str, str]] = None
+    post_code: Optional[str] = None
+    if data['kind'] == 'company':
+        address = data['data']['company']['registered_office_address']
+        post_code = address['postal_code']
+    elif data['kind'] == 'personal-appointment':
+        address = data['data']['items']['address']
+        post_code = address['postal_code']
+    elif data['kind'] == 'officer':
+        address = data['data']['items'][0]['address']
+        post_code = address['postal_code']
+    elif data['kind'] in ('charity', 'trustee'):
+        if 'Address' in data['data']:
+            address = {k: v.strip() if v else v
+                       for k, v in data['data']['Address'].items()}
+            post_code = address['Postcode'].strip()
+    else:
+        raise NotImplementedError(f"No implementation of kind: {data['kind']}")
+    data['address']: Optional[str] = address
+    data['post_code']: Optional[str] = post_code
+    data['ordinance']: Optional[JSONDict] = (
+            get_ordinance_data(post_code).json()['result']
+            if post_code else None
+        )
+    data['latitude']: Optional[float] = (
+            data['ordinance']['latitude']
+            if data['ordinance'] else None
+        )
+    data['longitude']: Optional[float] = (
+            data['ordinance']['longitude']
+            if data['ordinance'] else None
+        )
+
+
+def call_node_func(graph: Graph, func: Callable) -> Graph:
+    """Call a function iterating on all graph nodes."""
+    for node in graph.nodes(data=True):
+        func(*node)
+
+
+def set_node_data_func(graph: Graph, name: str, func: Callable) -> Graph:
+    """Call a function to add data to nodes, iterating on all graph nodes."""
+    for node in graph.nodes(data=True):
+        node[1][name] = func(*node)
 
 
 def file_log_handler(level: Optional[int] = logging.INFO,
@@ -143,7 +208,16 @@ class InternetConnectionError(Error):
 
     """Either no internet connection or a restricted local network."""
 
-    pass
+    DEFAULT_MESSAGE = ("You external IP address cannot be "
+                       "found. You may have lost internet "
+                       "connectivity or have a restricted "
+                       "local connection without access to "
+                       "the wider internet, including "
+                       "google.com, Companies House and "
+                       "Charity Commission APIs.")
+
+    def __init__(self, msg: str = DEFAULT_MESSAGE, *args, **kwargs) -> None:
+        super().__init__(msg, *args, **kwargs)
 
 
 def get_external_ip_address(
@@ -152,10 +226,4 @@ def get_external_ip_address(
     try:
         return requests.get(checkip_url).text
     except ConnectionError:
-        raise InternetConnectionError("You external IP address cannot be "
-                                      "found. You may have lost internet "
-                                      "connectivity or have a restricted "
-                                      "local connection without access to "
-                                      "the wider internet, including "
-                                      "google.com, Companies House and "
-                                      "Charity Commission APIs.")
+        raise InternetConnectionError
