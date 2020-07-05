@@ -269,6 +269,8 @@ def test_one_hop(current_test_orgs, caplog):
     assert len(current_test_orgs._charity_runs) == 2
 
 
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
 def test_ordinance_company_wrapper(current_test_orgs):
     """Test setting ordinance data for a company network."""
     OFFICER_0_ID = 'kk4hteZw_nx0lRsy5-qJAra1OlU'
@@ -301,6 +303,7 @@ def test_ordinance_company_wrapper(current_test_orgs):
             OFFICER_0_ID]['longitude'] == -0.06056
 
 
+@pytest.mark.remote_data
 def test_ordinance_charity_wrapper(current_test_orgs):
     """Test setting ordinance data for a charity network."""
     TRUSTEE = 11589843

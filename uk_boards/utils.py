@@ -22,7 +22,11 @@ from requests.exceptions import ConnectionError
 
 CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = 'https://domains.google.com/checkip'
 
-POSTCODE_IO = 'https://api.postcodes.io/postcodes/'
+POSTCODE_IO = 'https://api.postcodes.io/'
+
+POSTCODE_CURRENT = POSTCODE_IO + 'postcodes/'
+
+POSTCODE_TERMINATED = POSTCODE_IO + 'terminated_postcodes/'
 
 DEFAULT_API_KEY_PATH = Path('.env')
 
@@ -75,7 +79,22 @@ def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
 def get_ordinance_data(post_code: str) -> requests.Response:
     """Request ordinance survey data from postcodes.io."""
     try:
-        return requests.get(POSTCODE_IO + post_code)
+        response: requests.Response = requests.get(POSTCODE_CURRENT +
+                                                   post_code)
+        if response.status_code == 200:
+            return response.json()['result']
+        elif response.status_code == 404:
+            logger.warning(f"ordinance.io query for {post_code} "
+                           f"returned a 404. Trying {POSTCODE_TERMINATED}")
+            response = requests.get(POSTCODE_TERMINATED + post_code).json()
+            if 'result' in response:
+                return response['result']
+            else:
+                logger.error(f"No current or terminated record of {post_code} "
+                             f"available at the ordinance survey.")
+                return
+        else:
+            raise
     except ConnectionError:
         raise InternetConnectionError
 
@@ -86,34 +105,30 @@ def ordinance_wrapper(node_key: Union[int, str, float], data: JSONDict):
     post_code: Optional[str] = None
     if data['kind'] == 'company':
         address = data['data']['company']['registered_office_address']
-        post_code = address['postal_code']
+        post_code = address.get('postal_code', None)
     elif data['kind'] == 'personal-appointment':
         address = data['data']['items']['address']
-        post_code = address['postal_code']
+        post_code = address.get('postal_code', None)
     elif data['kind'] == 'officer':
-        address = data['data']['items'][0]['address']
-        post_code = address['postal_code']
+        address = data['data']['items'][0]['address'] if data['data'] else None
+        post_code = address.get('postal_code', None) if address else None
     elif data['kind'] in ('charity', 'trustee'):
         if 'Address' in data['data']:
             address = {k: v.strip() if v else v
                        for k, v in data['data']['Address'].items()}
-            post_code = address['Postcode'].strip()
+            post_code = (address.get('Postcode', None).strip()
+                         if address and address.get('Postcode', None)
+                         else None)
     else:
         raise NotImplementedError(f"No implementation of kind: {data['kind']}")
     data['address']: Optional[str] = address
     data['post_code']: Optional[str] = post_code
-    data['ordinance']: Optional[JSONDict] = (
-            get_ordinance_data(post_code).json()['result']
-            if post_code else None
-        )
-    data['latitude']: Optional[float] = (
-            data['ordinance']['latitude']
-            if data['ordinance'] else None
-        )
-    data['longitude']: Optional[float] = (
-            data['ordinance']['longitude']
-            if data['ordinance'] else None
-        )
+    data['ordinance']: Optional[JSONDict] = (get_ordinance_data(post_code)
+                                             if post_code else None)
+    data['latitude']: Optional[float] = (data['ordinance']['latitude']
+                                         if data['ordinance'] else None)
+    data['longitude']: Optional[float] = (data['ordinance']['longitude']
+                                          if data['ordinance'] else None)
 
 
 def call_node_func(graph: Graph, func: Callable) -> Graph:
