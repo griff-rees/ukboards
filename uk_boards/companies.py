@@ -289,9 +289,13 @@ class CompanyNetworkClient:
             parameter_states: Sequence[QueryParameters] = None,
             composed_query: bool = False,
             ) -> AsyncGenerator[Sequence[Graph], None]:
-        """Async query the ``root_company_ids`` list in order."""
-        async for root_company_id in root_company_ids:
-            assert False
+        """Async query the ``root_company_ids`` list in order.
+
+        Todo:
+            * Implement an async iterable for root_company_ids
+        """
+        # async for root_company_id in root_company_ids:
+        for root_company_id in root_company_ids:
             if composed_query:
                 logger.info(f"Composed async query of company "
                             f"{root_company_id}")

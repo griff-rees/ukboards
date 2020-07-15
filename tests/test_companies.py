@@ -935,7 +935,7 @@ def test_1_hop_fixture(caplog):
 @pytest.mark.asyncio
 @pytest.mark.skip_if_not_allowed_ip
 @pytest.fixture
-async def test_0_hop_composed_network_generator_exclude_inactive(caplog):
+async def test_async_0_hop_composed_network_generator_exclude_inactive(caplog):
     """Cache a basic 0 hop query filtered on active members and companies."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
     cn_client = CompanyNetworkClient(compose_queried_networks=True,
@@ -952,7 +952,7 @@ async def test_0_hop_composed_network_generator_exclude_inactive(caplog):
 @pytest.mark.remote_data
 @pytest.mark.asyncio
 @pytest.mark.skip_if_not_allowed_ip
-async def test_0_hop_composed_network_generator(caplog):
+async def test_async_0_hop_composed_network_generator(caplog):
     """Cache a basic 0 hop query and cache for related tests."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
     cn_client = CompanyNetworkClient(compose_queried_networks=True)
@@ -967,7 +967,7 @@ async def test_0_hop_composed_network_generator(caplog):
 @pytest.mark.remote_data
 @pytest.mark.asyncio
 @pytest.mark.skip_if_not_allowed_ip
-async def test_0_hop_not_composed_network_generator(caplog):
+async def test_async_0_hop_not_composed_network_generator(caplog):
     """Run a series of uncached 0 hop queries."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
     cn_client = CompanyNetworkClient()
@@ -997,25 +997,24 @@ def async_get_composed_network_fixture(caplog):
     return cn_client, composed_network
 
 
-# @pytest.mark.skip("Errors in async implementation to be addressed later")
-# @pytest.mark.remote_data
-# @pytest.mark.skip_if_not_allowed_ip
-# def test_async_get_composed_network(caplog, benchmark):
-#     """Cache a basic 0 hop query of active members and companies."""
-#     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
-#     cn_client = CompanyNetworkClient(compose_queried_networks=True,
-#                                      exclude_non_active_companies=True,
-#                                      exclude_resigned_board_members=True)
-#
-#     @pytest.mark.asyncio
-#     @benchmark
-#     def test_async_compose(company_ids=company_ids, cn_client=cn_client):
-#         cn_client.async_get_composed_network(company_ids)
-#
-#     assert len(cn_client._graph) == 11
-#     assert cn_client._runs[-1]['connected_components_count'] == 1
-#     assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 14
-#     assert False
+@pytest.mark.skip("Errors in async implementation to be addressed later")
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_async_get_composed_network(caplog, benchmark):
+    """Cache a basic 0 hop query of active members and companies."""
+    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
+    cn_client = CompanyNetworkClient(compose_queried_networks=True,
+                                     exclude_non_active_companies=True,
+                                     exclude_resigned_board_members=True)
+
+    @pytest.mark.asyncio
+    @benchmark
+    def test_async_compose(company_ids=company_ids, cn_client=cn_client):
+        cn_client.async_get_composed_network(company_ids)
+
+    assert len(cn_client._graph) == 11
+    assert cn_client._runs[-1]['connected_components_count'] == 1
+    assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 14
 
 
 @pytest.mark.remote_data
