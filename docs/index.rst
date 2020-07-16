@@ -8,7 +8,6 @@ Welcome to UK Boards's documentation!
    readme
    installation
    usage
-   modules
    contributing
    authors
    history
