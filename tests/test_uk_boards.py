@@ -179,7 +179,7 @@ def test_get_charity_network(current_test_orgs, caplog):
         * Currently charity_id seed nodes are strs.
     """
     composed_network = current_test_orgs.get_composed_charity_network()
-    assert len(composed_network) == 176
+    assert len(composed_network) == 178
     assert len(current_test_orgs._charity_runs) == 20
     charity_ids = set(current_test_orgs.charity_ids)
     connected_subnets = list(connected_components(composed_network))
@@ -251,7 +251,7 @@ def test_one_hop(current_test_orgs, caplog):
         if organisation.charity_id not in {'313343', '1113741'}:
             organisation._skip_charity = True
     charity_network, company_network = current_test_orgs.get_networks()
-    assert len(company_network) == 209
+    assert len(company_network) == 212
     assert len(current_test_orgs._company_runs) == 1
     assert current_test_orgs._company_runs[0]['composed_runs'][
             1]['kinds_ids_dict']['company'] == {

@@ -1127,7 +1127,7 @@ class TestCompanyNetwork:
         assert "04442574" not in company_network  # Disolved company 16/3/2020
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
-        assert len(company_network) == 133
+        assert len(company_network) == 136
         assert is_connected(company_network)
         for company_id in cn_client._runs[0]['kinds_ids_dict']['company']:
             assert (company_network.nodes[company_id]['data'][
