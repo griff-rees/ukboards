@@ -198,7 +198,6 @@ class TestBasicQueries:
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
     @pytest.mark.remote_data
-    @pytest.mark.xfail
     @pytest.mark.skip_if_not_allowed_ip
     def test_officers_query(self, caplog):
         """Test querying for officers with an option for register_view.
@@ -208,6 +207,23 @@ class TestBasicQueries:
         output = companies_house_query(
             f'/company/{PUNCHDRUNK_COMPANY_ID}/officers',
             params={'register_view': 'true'},
+            max_trials=1, sleep_time=1)
+        assert output.status_code == 200
+        # for key, value in PUNCHDRUNK_DICT_SUBSET.items():
+        #     assert output[key] == value
+        # assert caplog.records == []
+
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_page_parameter(self, caplog):
+        """Test querying for officers with an option for register_view.
+
+        Currently including this option yields a 400 error.
+        """
+        output = companies_house_query(
+            f'/company/{PUNCHDRUNK_COMPANY_ID}/officers',
+            params={'items_per_page': 30,
+                    'start_index': 31},
             max_trials=1, sleep_time=1)
         assert output.status_code == 200
         # for key, value in PUNCHDRUNK_DICT_SUBSET.items():
