@@ -35,7 +35,12 @@ Query UK company and charity board networks.
 Features
 --------
 
-* TODO
+* Command line interface for querying JSON data from the Companies House API
+* Support for https://developer.companieshouse.gov.uk/api/docs/
+* Support for https://apps.charitycommission.gov.uk/Showcharity/API/SearchCharitiesV1/Docs/DevGuideHome.aspx
+* Option to load keys for both APIs from a local `.env` file
+* Support for loading company and charity IDs from a CSV file
+* Alpha support for exporting networkx json files of board interlock structures
 
 Credits
 -------

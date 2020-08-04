@@ -6,7 +6,7 @@ import logging
 import os
 import time
 
-from typing import (Any, AsyncGenerator, Dict, Generator, List, Optional,
+from typing import (AsyncGenerator, Dict, Generator, List, Optional,
                     Sequence, Tuple, Union)
 
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ from .company_codes import COMPANIES_HOUSE_URI_CODES
 from .utils import (Error, NegativeIntBranchException, InternetConnectionError,
                     ExceededMaxBranchesException, QueryParameters,
                     RunConfigType, get_external_ip_address, get_kinds_ids_dict,
-                    DEFAULT_API_KEY_PATH)
+                    DEFAULT_API_KEY_PATH, JSONDict)
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,6 @@ COMPANIES_HOUSE_DATE_FORMAT = '%Y-%m-%d'
 COMPANIES_HOUSE_APPOINTED_KEYWORD = 'appointed_on'
 COMPANIES_HOUSE_RESIGNATION_KEYWORD = 'resigned_on'
 COMPANIES_HOUSE_CEASED_KEYWORD = 'ceased_on'
-
-JSONDict = Dict[str, Any]
 
 CompanyIDType = Union[str, int]
 
@@ -269,32 +267,46 @@ class CompanyNetworkClient:
     def networks_generator(self,
                            root_company_ids: Sequence[CompanyIDType],
                            parameter_states: Sequence[QueryParameters] = None,
+                           composed_query: bool = False,
                            ) -> Generator[Sequence[Graph], None, None]:
         """Query the ``root_company_ids`` list in order."""
         for root_company_id in root_company_ids:
+            if composed_query:
+                logger.info(f"Composed query of company {root_company_id}")
             if parameter_states:
                 self._parameter_state = next(parameter_states)
             yield self.get_network(root_company_id)
 
     def get_composed_network(self, *args, **kwargs):
         """Iterate over querires then return self._graph."""
-        [g for g in self.networks_generator(*args, **kwargs)]
+        [g for g in self.networks_generator(composed_query=True, *args,
+                                            **kwargs)]
         return self._graph
 
     async def async_networks_generator(
             self,
             root_company_ids: Sequence[CompanyIDType],
             parameter_states: Sequence[QueryParameters] = None,
+            composed_query: bool = False,
             ) -> AsyncGenerator[Sequence[Graph], None]:
-        """Async query the ``root_company_ids`` list in order."""
-        for i, root_company_id in enumerate(root_company_ids):
+        """Async query the ``root_company_ids`` list in order.
+
+        Todo:
+            * Implement an async iterable for root_company_ids
+        """
+        # async for root_company_id in root_company_ids:
+        for root_company_id in root_company_ids:
+            if composed_query:
+                logger.info(f"Composed async query of company "
+                            f"{root_company_id}")
             if parameter_states:
-                self._parameter_state = parameter_states[i]
+                self._parameter_state = next(parameter_states)
             yield self.get_network(root_company_id)
 
     async def async_get_composed_network(self, *args, **kwargs) -> Graph:
         """Async iterate over querires then return self._graph."""
-        [g async for g in self.async_networks_generator(*args, **kwargs)]
+        [g async for g in self.async_networks_generator(composed_query=True,
+                                                        *args, **kwargs)]
         return self._graph
 
     def _get_officer_name(self,
@@ -383,9 +395,9 @@ class CompanyNetworkClient:
                     appointment for appointment in appointments_data['items']
                     if COMPANIES_HOUSE_RESIGNATION_KEYWORD in appointment]
                     )
-                logger.warning(f"Skipping {resigend_board_positions_count} "
-                               f"resigned board positions for officer "
-                               f"{officer_id}")
+                logger.debug(f"Skipping {resigend_board_positions_count} "
+                             f"resigned board positions for officer "
+                             f"{officer_id}")
             else:
                 self._officer_appointments_cache[officer_id] = {
                     appointment['appointed_to']['company_number']: appointment

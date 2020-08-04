@@ -4,11 +4,17 @@
 """Test utils."""
 
 import logging
+from typing import Dict
 
 from networkx import Graph
 
+import pytest
+
 from uk_boards.utils import (read_csv, file_log_handler, read_json_graph,
-                             write_json_graph)
+                             write_json_graph, formatted_now_str,
+                             get_ordinance_data, set_node_data_func,
+                             ordinance_wrapper, DEFAULT_LOG_FILE_NAME,
+                             POSTCODE_CURRENT, POSTCODE_TERMINATED)
 
 
 logger = logging.getLogger(__name__)
@@ -73,3 +79,118 @@ def test_add_file_logger(tmp_path, caplog):
     test_logger.addHandler(file_handler3)
     log_text = path_test.read_text()
     assert log_text == ""
+
+
+def test_query_address(requests_mock, caplog):
+    """Test querying ordinance data from punchdrunk postcode."""
+    LAT: float = 51.590792
+    LON: float = -0.06056
+    POSTCODE: str = "N17 9LH"
+    URL_CONVERTED_POSTCODE: str = POSTCODE.replace(" ", '%20')
+    response: dict = {'status': 200, 'result': {
+            "postcode": POSTCODE, "quality": 1, "eastings": 534449,
+            "northings": 189775, "country": "England", "nhs_ha": "London",
+            "longitude": LON, "latitude": LAT,
+            "european_electoral_region": "London",
+        }}
+    requests_mock.get(POSTCODE_CURRENT + URL_CONVERTED_POSTCODE, json=response)
+    ordinance_data = get_ordinance_data(POSTCODE)
+    assert ordinance_data['postcode'] == POSTCODE
+    assert ordinance_data["latitude"] == LAT
+    assert ordinance_data["longitude"] == LON
+
+
+def test_query_address_terminated(caplog):
+    """Test querying ordinance data from punchdrunk postcode."""
+    TERMINATED_POSTCODE: str = "WC1R 4GB"
+    YEAR_TERMINATED: int = 2016
+    MONTH_TERMINATED: int = 3
+    LAT: float = 51.518359
+    LON: float = -0.117027
+    ordinance_data = get_ordinance_data(TERMINATED_POSTCODE)
+    assert ordinance_data['postcode'] == TERMINATED_POSTCODE
+    assert ordinance_data["latitude"] == LAT
+    assert ordinance_data["longitude"] == LON
+    assert ordinance_data["year_terminated"] == YEAR_TERMINATED
+    assert ordinance_data["month_terminated"] == MONTH_TERMINATED
+    assert caplog.messages == [
+        f'ordinance.io query for {TERMINATED_POSTCODE} returned a '
+        f'404. Trying {POSTCODE_TERMINATED}'
+    ]
+
+
+def test_incorrect_post_code(caplog):
+    """Test querying ordinance data from incorrect postcode."""
+    INCORRECT_POSTCODE: str = "WC2 9PA"
+    ordinance_data = get_ordinance_data(INCORRECT_POSTCODE)
+    assert ordinance_data is None
+    assert caplog.messages == [
+        (f'ordinance.io query for {INCORRECT_POSTCODE} returned a '
+         f'404. Trying {POSTCODE_TERMINATED}'),
+        (f"No current or terminated record of {INCORRECT_POSTCODE} "
+         f"available at the ordinance survey."),
+    ]
+
+
+def test_ordinance_wrapper_no_additional_company_data(caplog):
+    """Test edge company case where no additional data is available.
+
+    Todo:
+        * {'address_line_1': '35-47 Bethnal Green Road', 'locality': 'London',
+           'country': 'United Kingdom', 'premises': 'Unit 2.E.03'}
+    """
+    node_tuple: tuple[str, dict] = (
+            'G8Y9TpkksSLxGzzWMeixqNO15ow',
+            {'kind': 'officer', 'bipartite': 1, 'data': None}
+        )
+    ordinance_wrapper(*node_tuple)
+    assert node_tuple[1]['address'] is None
+    assert node_tuple[1]['post_code'] is None
+    assert node_tuple[1]['ordinance'] is None
+    assert node_tuple[1]['latitude'] is None
+    assert node_tuple[1]['longitude'] is None
+
+
+@pytest.mark.remote_data
+def test_ordinance_wrapper_no_null_charity_trustee_address(caplog):
+    """Test edge charity case where no address data is available."""
+    NULL_ADDRESS_DICT = {'Line1': None,
+                         'Line2': None,
+                         'Line3': None,
+                         'Line4': None,
+                         'Line5': None,
+                         'Postcode': None}
+    node_tuple: tuple[str, dict] = (
+            '1075794',
+            {'kind': 'trustee', 'bipartite': 1,
+                'data': {
+                    'Address': NULL_ADDRESS_DICT}})
+    ordinance_wrapper(*node_tuple)
+    assert node_tuple[1]['address'] == NULL_ADDRESS_DICT
+    assert node_tuple[1]['post_code'] is None
+    assert node_tuple[1]['ordinance'] is None
+    assert node_tuple[1]['latitude'] is None
+    assert node_tuple[1]['longitude'] is None
+
+
+def test_set_node_data_func():
+    """Test setting a new component of data in a network."""
+    g: Graph = Graph()
+    ATTR_NAME: str = '9times'
+    g.add_nodes_from([1, 2])
+
+    def n_times_9(n: int, data: Dict) -> int:
+        return n*9
+
+    set_node_data_func(g, ATTR_NAME, n_times_9)
+    assert list(g.nodes(data=True)) == [(1, {ATTR_NAME: 9}),
+                                        (2, {ATTR_NAME: 18})]
+
+
+def test_formatted_now_str():
+    """Test returning formatted str of current dateime."""
+    name_1 = f'default_{formatted_now_str()}.log'  # Later because of import
+    name_2 = DEFAULT_LOG_FILE_NAME  # Early because of the import
+    assert name_1[:17] == name_2[:17]
+    assert name_1[27:] == name_2[27:] == '.log'
+    assert name_1[17:27] >= name_2[17:27]
