@@ -3,4 +3,3 @@ networkx==2.4
 requests==2.22.0
 zeep==3.4.0
 python-dotenv==0.13.0
-dataclasses==0.7; python_version == '3.6'
