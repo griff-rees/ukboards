@@ -38,7 +38,7 @@ LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
 
 logger = logging.getLogger(__name__)
 
-QueryParameters = Dict[str, Union[int, bool]]
+QueryParameters = Dict[str, Union[str, bool, int]]
 
 DataRowDict = Dict[str, Union[str, int]]
 
