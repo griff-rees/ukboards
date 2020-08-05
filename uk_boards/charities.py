@@ -89,8 +89,8 @@ def check_registered_charity_number(name: str,
                     f'{charity_number}')
 
 
-def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
-                        branches: int = 0,
+def get_charity_network(charity_number: [int, str] = 1085314,  # TATE
+                        branches: int = 0,                     # FOUNDATION
                         client: Client = None,
                         api_key: str = CHARITY_COMMISSION_API_KEY,
                         test_name: str = None, *args,
@@ -99,6 +99,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
     if not client:
         client = get_client(api_key_value=api_key)
     try:
+        charity_number: int = int(charity_number)
         charity_data = client.service.GetCharityByRegisteredCharityNumber(
             registeredCharityNumber=charity_number,)
     except Fault:
@@ -121,7 +122,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                                  test_name.strip(), charity_name.strip(),
                                  charity_number))
     g.add_node(charity_number,
-               name=charity_name,
+               name=charity_name.strip(),
                bipartite=0,
                # Add a charity/company attribute
                kind=CHARITY_NETWORK_KINDS[0],
@@ -142,7 +143,7 @@ def get_charity_network(charity_number: int = 1085314,  # TATE FOUNDATION
                                               trustee['TrusteeName'],
                                               trustee['TrusteeNumber']))
             g.add_node(trustee['TrusteeNumber'],
-                       name=trustee['TrusteeName'],
+                       name=trustee['TrusteeName'].strip(),
                        bipartite=1,
                        kind=CHARITY_NETWORK_KINDS[1],
                        data=serialize_object(trustee))

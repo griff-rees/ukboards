@@ -30,6 +30,9 @@ TEST_PHOTOGRAPHERS_CHARITY_NUMBER = 262548
 
 TEST_API_KEY = "A-fake-test-key"
 
+TATE_FOUNDATION_ID = 1085314
+TATE_FOUNDATION_NAME = 'TATE FOUNDATION'
+
 
 @pytest.fixture
 def test_client(requests_mock, maxlen: int = 20):
@@ -190,11 +193,26 @@ class TestGetCharityNetwork:
     @pytest.mark.remote_data
     def test_tate_foundation(self, history_client):
         """Test basic query of Tate_Foundation board members."""
-        charity_network = get_charity_network(1085314, client=history_client)
+        charity_network = get_charity_network(TATE_FOUNDATION_ID,
+                                              client=history_client)
         assert len(charity_network) == 15
         assert is_connected(charity_network)
         tate_foundation, board_members = bipartite.sets(charity_network)
         assert len(board_members) == 14
+        assert (charity_network.nodes[TATE_FOUNDATION_ID]['name'] ==
+                TATE_FOUNDATION_NAME)
+        assert charity_network.nodes[11965582]['name'] == ("Dr Maria "
+                                                           "Jane Balshaw")
+
+    @pytest.mark.remote_data
+    def test_tate_foundation_str_id(self, history_client):
+        """Test basic query of Tate_Foundation board members."""
+        charity_network = get_charity_network("1085314", client=history_client)
+        assert len(charity_network) == 15
+        assert is_connected(charity_network)
+        tate_foundation, board_members = bipartite.sets(charity_network)
+        assert len(board_members) == 14
+        assert type(list(tate_foundation)[0]) is int
 
     @pytest.mark.remote_data
     def test_1hop_tate(self, history_client):
