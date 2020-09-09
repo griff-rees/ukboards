@@ -4,6 +4,8 @@
 """Test utils."""
 
 import logging
+from os import PathLike
+from pathlib import Path
 from typing import Dict
 
 from networkx import Graph
@@ -13,8 +15,9 @@ import pytest
 from uk_boards.utils import (read_csv, file_log_handler, read_json_graph,
                              write_json_graph, formatted_now_str,
                              get_ordinance_data, set_node_data_func,
-                             ordinance_wrapper, DEFAULT_LOG_FILE_NAME,
-                             POSTCODE_CURRENT, POSTCODE_TERMINATED)
+                             ordinance_wrapper, JSONDict,
+                             DEFAULT_LOG_FILE_NAME, POSTCODE_CURRENT,
+                             POSTCODE_TERMINATED)
 
 
 logger = logging.getLogger(__name__)
@@ -28,18 +31,46 @@ def test_csv_generator():
     assert orgs[4]['Organisation name'] == 'A Space Arts'
 
 
-def test_read_write_graph(tmp_path):
-    """Test writing and reading a graph."""
+@pytest.fixture
+def simple_graph():
+    """Return a basic graph for testing input/output."""
     g = Graph()
     g.add_node("034", bipartite=0, name="comp", data={'some': 'data'})
     g.add_node("1a", bipartite=1, name="jule", data={'mode': 'data-y'})
     g.add_edge("034", "1a", weight=2, data={'edgey': 'data'})
+    return g
+
+
+def test_read_write_graph(tmp_path, simple_graph):
+    """Test writing and reading a graph."""
     test_path = tmp_path / "test_path" / "test_graph.json"
-    write_json_graph(g, test_path)
+    write_json_graph(simple_graph, test_path)
     f = read_json_graph(test_path)
-    assert g.nodes(data=True) == f.nodes(data=True)
-    assert g.edges == f.edges
-    assert list(g.edges(data=True)) == list(f.edges(data=True))
+    assert simple_graph.nodes(data=True) == f.nodes(data=True)
+    assert simple_graph.edges == f.edges
+    assert (list(simple_graph.edges(data=True)) ==
+            list(f.edges(data=True)))
+
+
+def test_read_write_metadata(tmp_path, simple_graph):
+    """Test reading an example charity graph dataset."""
+    TEST_KEY: str = "test-key"
+    TEST_ADDITIONAL_DATA: JSONDict = {
+        "some": 5,
+        "more": "data"
+    }
+    test_path = tmp_path / "test_path" / "test_graph.json"
+    write_json_graph(simple_graph, test_path,
+                     additional_data=TEST_ADDITIONAL_DATA,
+                     additional_data_key=TEST_KEY)
+    f, d = read_json_graph(test_path,
+                           additional_data=True,
+                           additional_data_key=TEST_KEY)
+    assert simple_graph.nodes(data=True) == f.nodes(data=True)
+    assert simple_graph.edges == f.edges
+    assert (list(simple_graph.edges(data=True)) ==
+            list(f.edges(data=True)))
+    assert d['some'] == 5
 
 
 def test_add_file_logger(tmp_path, caplog):

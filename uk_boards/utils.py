@@ -46,6 +46,8 @@ JSONDict = Dict[str, Any]
 
 RunConfigType = Dict[str, Optional[Union[List, QueryParameters]]]
 
+JSON_ADDITIONAL_DATA_KEY = 'uk-boards-metadata'
+
 
 def formatted_now_str(date_format: str = LOG_FILENAME_DATE_FORMAT):
     """Return current time in ``date_format`` format."""
@@ -62,18 +64,32 @@ def read_csv(path: PathLike, **kwargs) -> Sequence[DataRowDict]:
             yield i, line
 
 
-def write_json_graph(graph: Graph, path: PathLike = JSON_DATA_PATH) -> None:
+def write_json_graph(graph: Graph,
+                     path: PathLike = JSON_DATA_PATH,
+                     additional_data: JSONDict = None,
+                     additional_data_key: str = JSON_ADDITIONAL_DATA_KEY
+                     ) -> None:
     """Write a json file including nodes, edges and attributes."""
     path = Path(path)
     path.parent.mkdir(exist_ok=True, parents=True)
     with open(path, "w") as graph_file:
-        dump(node_link_data(graph), graph_file, default=str)
+        json_graph: JSONDict = node_link_data(graph)
+        if additional_data:
+            json_graph[additional_data_key] = additional_data
+        dump(json_graph, graph_file, default=str)
 
 
-def read_json_graph(path: PathLike = JSON_DATA_PATH) -> Graph:
+def read_json_graph(path: PathLike = JSON_DATA_PATH,
+                    additional_data: bool = False,
+                    additional_data_key: str = JSON_ADDITIONAL_DATA_KEY
+                    ) -> Graph:
     """Read a json link_data_format file with nodes, edges and attributes."""
     with open(path) as graph_file:
-        return node_link_graph(load(graph_file))
+        json_graph: JSONDict = load(graph_file)
+        if additional_data:
+            return (node_link_graph(json_graph),
+                    json_graph[additional_data_key])
+        return node_link_graph(json_graph)
 
 
 def get_ordinance_data(post_code: str) -> requests.Response:
