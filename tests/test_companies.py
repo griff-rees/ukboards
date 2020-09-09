@@ -22,6 +22,7 @@ from uk_boards.companies import (stringify_company_id,
                                  companies_house_query,
                                  get_company_data,
                                  get_company_officers,
+                                 get_company_officers_data,
                                  get_company_network,
                                  is_inactive,
                                  filter_active_board_members,
@@ -49,11 +50,16 @@ PUNCHDRUNK_JSON_SUBSET = ('{{"status": "active", '
                           f'"company_name": "{PUNCHDRUNK_COMPANY_NAME}"}}')
 PUNCHDRUNK_DICT_SUBSET = {"status": "active",
                           "company_name": PUNCHDRUNK_COMPANY_NAME}
+PUNCHDRUNK_TOTAL_OFFICERS: int = 33  # As of August 2020
+
+# A Company with greater than 35 records of board members (including resigned)
+BOOKTRUST_COMPANY_ID: str = '00210012'
+BOOKTRUST_TOTAL_OFFICERS: int = 83  # As of August 2020
 
 # A CIO company
-ACCESS_COMPANY_NAME = 'ACCESS ALL AREAS'
-ACCESS_COMPANY_ID = 'CE010135'
-ACCESS_EXTERNAL_REG_ID = '1172706'
+ACCESS_COMPANY_NAME: str = 'ACCESS ALL AREAS'
+ACCESS_COMPANY_ID: str = 'CE010135'
+ACCESS_EXTERNAL_REG_ID: str = '1172706'
 
 ACCESS_JSON = {
     'type': 'charitable-incorporated-organisation',
@@ -98,6 +104,29 @@ def controllers_individual_url(company_id: str,
     return COMPANIES_HOUSE_URL + controllers_endpoint(company_id,
                                                       'individual',
                                                       individual_id)
+
+
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_get_company_officer_data_total_results(caplog):
+    """Test adding `items_per_page` for > 35 default officer pagination."""
+    output = get_company_officers_data(BOOKTRUST_COMPANY_ID,
+                                       # params={'items_per_page': 300},
+                                       )
+    assert output['total_results'] == BOOKTRUST_TOTAL_OFFICERS
+    assert len(output['items']) == BOOKTRUST_TOTAL_OFFICERS
+    assert caplog.records == []
+
+
+@pytest.mark.remote_data
+@pytest.mark.skip_if_not_allowed_ip
+def test_get_paginated_officer_appointments(caplog):
+    """Pagination of an officer's 59 listed appointments."""
+    TEST_OFFICER_ID: str = 'jPDjBFxindfhdgXh5IEu00ZGauA'
+    output = get_officer_appointments_data(TEST_OFFICER_ID, )
+    assert output['total_results'] == 59
+    assert len(output['items']) == 59
+    assert caplog.records == []
 
 
 class TestCorrectCompanyNumber:
@@ -197,38 +226,43 @@ class TestBasicQueries:
             assert output[key] == value
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
-    @pytest.mark.remote_data
-    @pytest.mark.skip_if_not_allowed_ip
-    def test_officers_query(self, caplog):
-        """Test querying for officers with an option for register_view.
+    # @pytest.mark.remote_data
+    # @pytest.mark.skip_if_not_allowed_ip
+    # @pytest.mark.xfail
+    # def test_officers_query(self, caplog):
+    #     """Test querying for officers with an option for register_view.
 
-        Currently including this option yields a 400 error.
-        """
-        output = companies_house_query(
-            f'/company/{PUNCHDRUNK_COMPANY_ID}/officers',
-            params={'register_view': 'true'},
-            max_trials=1, sleep_time=1)
-        assert output.status_code == 200
-        # for key, value in PUNCHDRUNK_DICT_SUBSET.items():
-        #     assert output[key] == value
-        # assert caplog.records == []
+    #     Currently including this option yields a 400 error.
+    #     """
+    #     output = companies_house_query(
+    #         f'/company/{PUNCHDRUNK_COMPANY_ID}/officers',
+    #         params={'register_view': 'true'},
+    #         max_trials=1, sleep_time=1)
+    #     assert output.status_code == 200
+    #     for key, value in PUNCHDRUNK_DICT_SUBSET.items():
+    #         assert output[key] == value
+    #     assert caplog.records == []
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_page_parameter(self, caplog):
         """Test querying for officers with an option for register_view.
-
-        Currently including this option yields a 400 error.
         """
+        START_INDEX: int = 31
+        caplog.set_level = INFO
         output = companies_house_query(
             f'/company/{PUNCHDRUNK_COMPANY_ID}/officers',
             params={'items_per_page': 30,
-                    'start_index': 31},
+                    'start_index': START_INDEX},
             max_trials=1, sleep_time=1)
-        assert output.status_code == 200
-        # for key, value in PUNCHDRUNK_DICT_SUBSET.items():
-        #     assert output[key] == value
-        # assert caplog.records == []
+        assert output['total_results'] == PUNCHDRUNK_TOTAL_OFFICERS
+        assert len(output['items']) == PUNCHDRUNK_TOTAL_OFFICERS - START_INDEX
+        assert len(caplog.records) == 3
+        assert caplog.messages[2] == (
+                "Could not extend dict of pagination records for "
+                f"/company/{PUNCHDRUNK_COMPANY_ID}/officers\n"
+                "Error: ''NoneType' object is not subscriptable'\n"
+                "at 2 of 2 queries.")
 
 
 def test_disolved_company(requests_mock, caplog):
@@ -593,6 +627,7 @@ class TestGetCompanyNetwork:
         basic_officer_tests(company_network)
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
+    @pytest.mark.skip
     @pytest.mark.xfail
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
@@ -606,7 +641,7 @@ class TestGetCompanyNetwork:
                                               branches=1)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 413
+        assert len(company_network) == 513
         assert not is_connected(company_network)
         barbican_theatre_net, shared_experience_net = connected_components(
             company_network)
@@ -626,7 +661,7 @@ class TestGetCompanyNetwork:
                                               enforce_missing_ties=True)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 413
+        assert len(company_network) == 513
         assert is_connected(company_network)
         barbican_theatre_board, shared_experience_board = (
             set(neighbors(company_network, n))
@@ -950,7 +985,7 @@ def test_1_hop_fixture(caplog):
 @pytest.mark.remote_data
 @pytest.mark.asyncio
 @pytest.mark.skip_if_not_allowed_ip
-@pytest.fixture
+# @pytest.fixture
 async def test_async_0_hop_composed_network_generator_exclude_inactive(caplog):
     """Cache a basic 0 hop query filtered on active members and companies."""
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
@@ -960,9 +995,9 @@ async def test_async_0_hop_composed_network_generator_exclude_inactive(caplog):
     graphs = [g async for g in cn_client.async_networks_generator(company_ids)]
     assert tuple(cn_client._root_node_ids) == company_ids
     assert len(graphs[0]) == 5
-    assert len(graphs[1]) == 16
-    assert number_connected_components(graphs[1]) == 2
-    return cn_client
+    assert len(graphs[1]) == 11
+    assert number_connected_components(graphs[1]) == 1
+    # return cn_client
 
 
 @pytest.mark.remote_data
@@ -999,35 +1034,22 @@ async def test_async_0_hop_not_composed_network_generator(caplog):
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-@pytest.fixture
-def async_get_composed_network_fixture(caplog):
+def test_async_get_composed_network(caplog, benchmark):
     """Cache a basic 0 hop query filtered on active members and companies."""
+    caplog.set_level(level=INFO)
     company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
     cn_client = CompanyNetworkClient(compose_queried_networks=True,
                                      exclude_non_active_companies=True,
                                      exclude_resigned_board_members=True)
     loop = asyncio.get_event_loop()
-    composed_network = loop.run_until_complete(
-            cn_client.get_composed_network(company_ids))
-    loop.close()
-    return cn_client, composed_network
 
-
-@pytest.mark.skip("Errors in async implementation to be addressed later")
-@pytest.mark.remote_data
-@pytest.mark.skip_if_not_allowed_ip
-def test_async_get_composed_network(caplog, benchmark):
-    """Cache a basic 0 hop query of active members and companies."""
-    company_ids = (BARBICAN_THEATRE_COMPANY_ID, PUNCHDRUNK_COMPANY_ID)
-    cn_client = CompanyNetworkClient(compose_queried_networks=True,
-                                     exclude_non_active_companies=True,
-                                     exclude_resigned_board_members=True)
-
-    @pytest.mark.asyncio
     @benchmark
-    def test_async_compose(company_ids=company_ids, cn_client=cn_client):
-        cn_client.async_get_composed_network(company_ids)
+    def test_async_compose(company_ids=company_ids,
+                           cn_client=cn_client, loop=loop):
+        loop.run_until_complete(cn_client.async_get_composed_network(
+                                company_ids))
 
+    loop.close()
     assert len(cn_client._graph) == 11
     assert cn_client._runs[-1]['connected_components_count'] == 1
     assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 14
@@ -1143,7 +1165,7 @@ class TestCompanyNetwork:
         assert "04442574" not in company_network  # Disolved company 16/3/2020
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
-        assert len(company_network) == 136
+        assert len(company_network) == 127
         assert is_connected(company_network)
         for company_id in cn_client._runs[0]['kinds_ids_dict']['company']:
             assert (company_network.nodes[company_id]['data'][
@@ -1161,7 +1183,7 @@ class TestCompanyNetwork:
         company_network = cn_client.get_network(BARBICAN_THEATRE_COMPANY_ID)
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 413
+        assert len(company_network) == 513
         assert is_connected(company_network)
         barbican_theatre_board, shared_experience_board = (
             set(neighbors(company_network, n))
@@ -1174,6 +1196,7 @@ class TestCompanyNetwork:
         barbican_one_hop_caplog_tests(caplog)
 
     @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_client_1_branch_board_disconnected(self, caplog,
@@ -1187,7 +1210,7 @@ class TestCompanyNetwork:
         company_network = cn_client._graph
         assert (company_network.nodes[BARBICAN_THEATRE_COMPANY_ID]['name'] ==
                 BARBICAN_THEATRE_COMPANY_NAME)
-        assert len(company_network) == 413
+        assert len(company_network) == 513
         assert not is_connected(company_network)
         barbican_theatre_net, shared_experience_net = connected_components(
             company_network)
@@ -1219,11 +1242,11 @@ class TestCompanyNetwork:
             assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
                     key] == value
         # Ensure the name allocated comes from the edge data available
-        assert company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID][
-                'name'] == company_network[
-                        ERROR_404_EXAMPLE_OFFICER_ID][
+        assert (
+            company_network.nodes[ERROR_404_EXAMPLE_OFFICER_ID]['name'] == (
+                company_network[ERROR_404_EXAMPLE_OFFICER_ID][
                                 COMPANY_WITH_404_EXAMPLE_OFFICER][
-                                        'data']['name']
+                                    'data']['name']))
 
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
@@ -1239,8 +1262,8 @@ class TestCompanyNetwork:
                                       branches=1)
         company_network = client.get_network(COMPANY_WITH_404_EXAMPLE_OFFICER)
         companies, board_members = bipartite.sets(company_network)
-        assert len(companies) == 10
-        assert len(board_members) == 46
+        assert len(companies) == 7
+        assert len(board_members) == 44
         assert is_connected(company_network)
         assert ERROR_404_EXAMPLE_OFFICER_ID in company_network
         for key, value in CORRECT_NODE.items():

@@ -17,9 +17,9 @@ from uk_boards.utils import (DEFAULT_LOG_FILE_NAME, call_node_func,
 
 
 BOOKTRUST_COMPANY_ID = '00210012'
-BOOKTRUST_CHARITY_ID = '313343'
+BOOKTRUST_CHARITY_ID = 313343
 PUNCHDRUNK_COMPANY_ID = '04547069'
-PUNCHDRUNK_CHARITY_ID = '1113741'
+PUNCHDRUNK_CHARITY_ID = 1113741
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def test_get_company_networks(test_orgs, caplog):
     assert len(test_orgs._company_runs[4]['kinds_ids_dict'][
             'officer']) == 14
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 492
+    assert len(composed_network) == 646
 
 
 @pytest.mark.remote_data
@@ -108,7 +108,7 @@ def test_get_composed_company_network(test_orgs, caplog):
         * Consider avoiding deepcopy in some places
     """
     composed_network = test_orgs.get_composed_company_network()
-    assert len(composed_network) == 492
+    assert len(composed_network) == 646
     assert len(test_orgs._company_runs) == 1
     assert len(test_orgs._company_runs[0]['composed_runs']) == 24
     assert test_orgs._company_runs[0]['composed_runs'][4][
@@ -154,7 +154,7 @@ def test_get_current_composed_company_network(current_test_orgs, caplog):
             {'10575570'},
         ]
     composed_network = current_test_orgs.get_composed_company_network()
-    assert len(composed_network) == 183
+    assert len(composed_network) == 182
     for i, comp in enumerate(connected_components(composed_network)):
         # All company IDs are < 10 and board member IDs > 10
         assert (CORRECT_CONNECTED_COMPONENT_COMPANY_IDS[i] ==
@@ -215,8 +215,8 @@ def test_both_no_hop(current_test_orgs, tmp_path, caplog, capsys):
         # Booktrust and Punchdrunk
         if organisation.company_id not in {'210012', '04547069'}:
             organisation._skip_company = True
-        if organisation.charity_id not in {BOOKTRUST_CHARITY_ID,
-                                           PUNCHDRUNK_CHARITY_ID}:
+        if organisation.charity_id not in {str(BOOKTRUST_CHARITY_ID),
+                                           str(PUNCHDRUNK_CHARITY_ID)}:
             organisation._skip_charity = True
     current_test_orgs.log_params['folder'] = tmp_path
     current_test_orgs.log_params['level'] = DEBUG
@@ -234,8 +234,9 @@ def test_both_no_hop(current_test_orgs, tmp_path, caplog, capsys):
     assert len(current_test_orgs._charity_runs) == 2
     with open(tmp_path / DEFAULT_LOG_FILE_NAME) as logs:
         assert logs
-    #     assert logs.readlines() == 'Some string'
+        # assert logs.readlines() == 'Some string'
     #     assert False
+    # current_test_orgs.write_networks(path=tmp_path)
 
 
 @pytest.mark.remote_data
@@ -251,7 +252,7 @@ def test_one_hop(current_test_orgs, caplog):
         if organisation.charity_id not in {'313343', '1113741'}:
             organisation._skip_charity = True
     charity_network, company_network = current_test_orgs.get_networks()
-    assert len(company_network) == 212
+    assert len(company_network) == 204
     assert len(current_test_orgs._company_runs) == 1
     assert current_test_orgs._company_runs[0]['composed_runs'][
             1]['kinds_ids_dict']['company'] == {
@@ -305,10 +306,14 @@ def test_ordinance_company_wrapper(current_test_orgs):
 
 @pytest.mark.remote_data
 def test_ordinance_charity_wrapper(current_test_orgs):
-    """Test setting ordinance data for a charity network."""
+    """Test setting ordinance data for a charity network.
+
+    Todo:
+        * Alter str/int conversion to account for both
+    """
     TRUSTEE = 11589843
     for organisation in current_test_orgs:
-        if organisation.charity_id != PUNCHDRUNK_CHARITY_ID:
+        if organisation.charity_id != str(PUNCHDRUNK_CHARITY_ID):
             organisation._skip_charity = True
     charity_network: Graph = current_test_orgs.get_composed_charity_network()
     call_node_func(charity_network, ordinance_wrapper)

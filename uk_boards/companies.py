@@ -3,6 +3,7 @@
 
 from datetime import datetime
 import logging
+from math import ceil
 import os
 import time
 
@@ -28,35 +29,47 @@ logger = logging.getLogger(__name__)
 load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
 
 
-COMPANIES_HOUSE_URL = 'https://api.companieshouse.gov.uk'
-COMPANIES_HOUSE_API_KEY_NAME = "COMPANIES_HOUSE_KEY"
-COMPANIES_HOUSE_API_KEY = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
+COMPANIES_HOUSE_URL: str = 'https://api.companieshouse.gov.uk'
+COMPANIES_HOUSE_API_KEY_NAME: str = "COMPANIES_HOUSE_KEY"
+COMPANIES_HOUSE_API_KEY: str = os.getenv(COMPANIES_HOUSE_API_KEY_NAME)
 
-COMPANY_SUFFIXES = ('LTD', 'LIMITED', 'LLC',)
+COMPANY_SUFFIXES: Tuple[str, str, str] = ('LTD', 'LIMITED', 'LLC',)
 
-COMPANIES_HOUSE_DATE_FORMAT = '%Y-%m-%d'
+COMPANIES_HOUSE_DATE_FORMAT: str = '%Y-%m-%d'
 
-COMPANIES_HOUSE_APPOINTED_KEYWORD = 'appointed_on'
-COMPANIES_HOUSE_RESIGNATION_KEYWORD = 'resigned_on'
-COMPANIES_HOUSE_CEASED_KEYWORD = 'ceased_on'
+COMPANIES_HOUSE_TOTAL_RESULTS_KEYWORD: str = 'total_results'
+COMPANIES_HOUSE_ITEMS_QUERY_KEYWORD: str = 'items_per_page'
+COMPANIES_HOUSE_PAGINATION_KEYWORD: str = 'start_index'
+COMPANIES_HOUSE_APPOINTED_KEYWORD: str = 'appointed_on'
+COMPANIES_HOUSE_RESIGNATION_KEYWORD: str = 'resigned_on'
+COMPANIES_HOUSE_CEASED_KEYWORD: str = 'ceased_on'
+
+COMPANIES_HOUSE_QUERIES_COUNTS_KEYWORD: str = 'items_per_query_list'
+
+COMPANIES_HOUSE_DEFAULT_PAGINATION: int = 35
+COMPANIES_HOUSE_MAX_OFFICER_PAGINATION: int = 50
 
 CompanyIDType = Union[str, int]
-
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
 
-COMPANY_NETWORK_KINDS = ('company', 'officer', 'controller')
+COMPANY_NETWORK_KINDS: Tuple[str, str, str] = ('company', 'officer',
+                                               'controller')
 
 OFFICER_LINKS_KEY = "officers"
 CONTROLLERS_LINKS_KEY = "persons_with_significant_control_statements"
 
 
-def companies_house_query(query: str,
-                          auth_key: str = COMPANIES_HOUSE_API_KEY,
-                          sleep_time: int = 60,
-                          url_prefix: str = COMPANIES_HOUSE_URL,
-                          max_trials: int = 6,
-                          params: Dict[str, Union[str, bool, int]] = None,
-                          ) -> Optional[JSONDict]:
+def companies_house_query(
+        query: str,
+        auth_key: str = COMPANIES_HOUSE_API_KEY,
+        sleep_time: int = 60,
+        url_prefix: str = COMPANIES_HOUSE_URL,
+        max_trials: int = 6,
+        params: QueryParameters = None,
+        items_per_page: int = COMPANIES_HOUSE_MAX_OFFICER_PAGINATION,
+        items_per_page_keyword: str = COMPANIES_HOUSE_ITEMS_QUERY_KEYWORD,
+        pagination: bool = True,
+        ) -> Optional[JSONDict]:
     """
     Companies House API quiery repeated when necessary, returns json if valid.
 
@@ -87,6 +100,7 @@ def companies_house_query(query: str,
     """
     auth_tuple = (auth_key, "")
     trials = max_trials
+    params = params or {items_per_page_keyword: items_per_page}
     response = requests.get(url_prefix + query, auth=auth_tuple,
                             params=params)
     while trials:
@@ -96,6 +110,24 @@ def companies_house_query(query: str,
         except ConnectionError:
             raise InternetConnectionError
         if response.status_code == 200:
+            if pagination:
+                paginated_responses = [
+                        response_dict for response_dict in
+                        _expand_query_for_pagination(query, response)]
+                if len(paginated_responses) > 1:
+                    return _join_pagination_queries(paginated_responses)
+                return paginated_responses[0]
+                # import pdb; pdb.set_trace()
+
+            # requery_count_required: Optional[int] = (
+            #         expand_query_for_pagination(response.json()))
+            # if requery_count_required:  # Int if required, Null if not
+            #     params[COMPANIES_HOUSE_ITEMS_QUERY_KEYWORD] = (
+            #             requery_count_required
+            #             )
+            #     return companies_house_query(query, auth_key, sleep_time,
+            #                                  url_prefix, max_trials, params)
+            # import pdb; pdb.set_trace()
             return response.json()
         logger.warning(f'Status code {response.status_code} from {query}')
         if response.status_code in (403, 401):
@@ -117,6 +149,61 @@ def companies_house_query(query: str,
     raise Exception(
             f"Failed {max_trials} attempt(s) querying "
             f"{url_prefix + query}")
+
+
+def _expand_query_for_pagination(
+        query: str,
+        response: requests.Response,
+        params: QueryParameters = None,
+        max_pagination: int = COMPANIES_HOUSE_MAX_OFFICER_PAGINATION,
+        start_index_keyword: str = COMPANIES_HOUSE_PAGINATION_KEYWORD,
+        total_results_keyword: str = COMPANIES_HOUSE_TOTAL_RESULTS_KEYWORD,
+        current_per_page_keyword: int = COMPANIES_HOUSE_ITEMS_QUERY_KEYWORD,
+        **kwargs) -> Optional[int]:
+    """Return number of records if pagination exceeds results, None otherwise.
+
+    Note:
+        * Assumes the `total_results` component is applicable for all relevant
+          cases.
+    """
+    params = params or {}
+    response_dict = response.json()
+    yield response_dict
+    if (total_results_keyword in response_dict and
+            current_per_page_keyword in response_dict):
+        current_per_page = response_dict[current_per_page_keyword]
+        total_results = response_dict[total_results_keyword]
+        per_page = max(current_per_page, max_pagination)
+        params[current_per_page_keyword] = per_page
+        if total_results > current_per_page:
+            remaining_queries = ceil((total_results - current_per_page) /
+                                     max_pagination)
+            for i in range(remaining_queries):
+                params[start_index_keyword] = (i + 1)*per_page
+                yield companies_house_query(query, params=params,
+                                            pagination=False,
+                                            **kwargs)
+
+
+def _join_pagination_queries(
+        queries: List[JSONDict],
+        queries_count_keyword: str = COMPANIES_HOUSE_QUERIES_COUNTS_KEYWORD,
+        ) -> JSONDict:
+    """Join a paginated list of queries into a single dict."""
+    joined_dict: dict = queries[0]
+    joined_dict[queries_count_keyword]: List[int] = [
+            len(joined_dict['items']), ]
+    for i, json_dict in enumerate(queries[1:]):
+        try:
+            joined_dict[queries_count_keyword].append(len(json_dict['items']))
+            joined_dict['items'].extend(json_dict['items'])
+        except TypeError as err:
+            logger.warning(f"Could not extend dict of pagination records for "
+                           f"{joined_dict['links']['self']}\n"
+                           f"Error: '{err}'\n"
+                           # i+2 to account for queries[1:] + 1 for 0 indexing
+                           f"at {i+2} of {len(queries)} queries.")
+    return joined_dict
 
 
 class CompaniesHousePermissionError(Error):
@@ -684,7 +771,7 @@ def get_company_data(company_id: CompanyIDType = '04547069',
     return company
 
 
-def get_company_officers_data(company_id: CompanyIDType = '04547069'
+def get_company_officers_data(company_id: CompanyIDType = '04547069',
                               ) -> JSONDict:
     officers_query = companies_house_query(
             f'/company/{company_id}/officers')
@@ -736,7 +823,7 @@ def get_officer_appointments_data(officer_id: str,
     appointments = companies_house_query(
             f'/officers/{officer_id}/appointments')
     if not appointments:
-        # Worth considering saving eact error
+        # Worth considering saving exact error
         if {'company', 'company_id', 'officer_data'} <= kwargs.keys():
             company, company_id, officer_data = (kwargs['company'],
                                                  kwargs['company_id'],

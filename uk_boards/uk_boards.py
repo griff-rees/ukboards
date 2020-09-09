@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 
 from datetime import datetime
 
+from json import dump
+
 from logging import getLogger
 
 from os import PathLike
@@ -21,7 +23,9 @@ from .companies import CompanyNetworkClient, CompanyIDType
 from .charities import (get_charity_network, CharityIDType,
                         CHARITY_NETWORK_KINDS)
 from .utils import (read_csv, file_log_handler, get_kinds_ids_dict,
-                    QueryParameters, RunConfigType, LOG_TIME_FORMAT)
+                    write_json_graph, read_json_graph,
+                    QueryParameters, RunConfigType, JSON_DATA_PATH,
+                    LOG_TIME_FORMAT)
 
 
 logger = getLogger(__name__)
@@ -405,14 +409,14 @@ class OrganisationSequence(MutableSequence):
                                      # start_entry: int = 0,
                                      **kwargs: QueryParameters) -> Graph:
         """Iterate over charities, compose networks and return."""
-        if not self._charity_networks_cached:
-            try:
+        try:
+            if not self._charity_networks_cached:
                 return compose_all(graph for _, graph in
                                    self.get_charity_networks())
-            except StopIteration:
-                logger.warning("No charity networks to compose.")
-        return compose_all(n.charity_network for n in self
-                           if hasattr(n, 'charity_network'))
+            return compose_all(n.charity_network for n in self
+                               if hasattr(n, 'charity_network'))
+        except StopIteration:
+            logger.warning("No charity networks to compose.")
         # if not hasattr(self, '_charity_network'):
         #     self.get_charity_networks(*args, **kwargs)
         #     self._charity_network: Graph = compose_all(
@@ -479,6 +483,7 @@ class OrganisationSequence(MutableSequence):
         finally:
             end = datetime.now()
             logger.info(f'End: {end.strftime(LOG_TIME_FORMAT)}')
+            # Note: timedelta doesn't support strftime, probably remove '()'
             logger.info(f'Total Time: {(end - start)}')
         # if pickle_path:
         #     with open(pickle_path, 'wb') as pickle_file:
@@ -486,10 +491,49 @@ class OrganisationSequence(MutableSequence):
         # return self._company_network, self._charity_network
         return charity_network, company_network
 
+    def _write_network(self,
+                       network_attr_name: str,
+                       logs_attr_name: Optional[str],
+                       run_index: int = -1,  # Defaults to last run
+                       path: PathLike = JSON_DATA_PATH,
+                       config: bool = True) -> None:
+        try:
+            assert hasattr(self, network_attr_name)
+            config_dict: RunConfigType = getattr(self, logs_attr_name)[-1]
+            file_name_suffix: str = (
+                    f'{network_attr_name}-'
+                    f'{config_dict["start_time"].strftime(LOG_TIME_FORMAT)}'
+                    f'.json')
+            write_json_graph(getattr(self, network_attr_name),
+                             path / f'network_{file_name_suffix}')
+            if config:
+                config_path: PathLike = path / f'config_{file_name_suffix}'
+                with open(config_path, "w") as config_file:
+                    dump(config_dict, config_file, default=str)
+        except AttributeError:
+            raise AttributeError("{self} has no {network_attr_name} network "
+                                 "object to save.")
+
     def write_networks(self,
-                       chaities: bool = True,
+                       composed: bool = True,
+                       run_index: int = -1,  # Defaults to last runs
+                       save_run_json: bool = True,
+                       charities: bool = True,
                        companies: bool = True,
                        path: PathLike = None) -> None:
-        for organisation in self:
-            if companies and hasattr(organisation, "company_network"):
-                pass
+        """Write json files of saved company and/or charity networks."""
+        if composed:
+            if charities:
+                self._write_network("charities_network", "_charity_runs",
+                                    run_index, run_index)
+            if companies:
+                self._write_network("companies_network", "_company_runs",
+                                    run_index, run_index)
+        # else:
+        #     for organisation in self:
+        #         if charities:
+        #             self._write_network("charities_network", "_charity_runs",
+        #                                 run_index, save_run_index)
+        #         if companies:
+        #             self._write_network("companies_network", "_company_runs",
+        #                                 run_index, save_run_index)

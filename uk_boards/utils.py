@@ -131,13 +131,19 @@ def ordinance_wrapper(node_key: Union[int, str, float], data: JSONDict):
                                           if data['ordinance'] else None)
 
 
-def call_node_func(graph: Graph, func: Callable) -> Graph:
+def call_node_func(graph: Optional[Graph],
+                   func: Callable) -> Graph:
     """Call a function iterating on all graph nodes."""
-    for node in graph.nodes(data=True):
-        func(*node)
+    try:
+        for node in graph.nodes(data=True):
+            func(*node)
+    except AttributeError:
+        logger.warning(f"{graph} passed which must be a Graph "
+                       f"object so {func} cannot be fun.")
 
 
-def set_node_data_func(graph: Graph, name: str, func: Callable) -> Graph:
+def set_node_data_func(graph: Optional[Graph],
+                       name: str, func: Callable) -> Graph:
     """Call a function to add data to nodes, iterating on all graph nodes."""
     for node in graph.nodes(data=True):
         node[1][name] = func(*node)
