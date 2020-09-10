@@ -5,7 +5,6 @@
 
 import logging
 from os import PathLike
-from pathlib import Path
 from typing import Dict
 
 from networkx import Graph
@@ -59,7 +58,7 @@ def test_read_write_metadata(tmp_path, simple_graph):
         "some": 5,
         "more": "data"
     }
-    test_path = tmp_path / "test_path" / "test_graph.json"
+    test_path: PathLike = tmp_path / "test_path" / "test_graph.json"
     write_json_graph(simple_graph, test_path,
                      additional_data=TEST_ADDITIONAL_DATA,
                      additional_data_key=TEST_KEY)

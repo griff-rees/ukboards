@@ -71,7 +71,7 @@ def test_load_csv_of_organisations(test_orgs):
     """Test loading from a csv file."""
     assert len(test_orgs) == 28
     assert test_orgs[4].company_id == '7007198'
-    assert test_orgs[4].charity_id == '1136495'
+    assert test_orgs[4].charity_id == 1136495
     assert test_orgs[4].name == 'A Space Arts'
     assert str(test_orgs[4]) == ('A Space Arts: Company 7007198 | '
                                  'Charity 1136495')
@@ -215,8 +215,8 @@ def test_both_no_hop(current_test_orgs, tmp_path, caplog, capsys):
         # Booktrust and Punchdrunk
         if organisation.company_id not in {'210012', '04547069'}:
             organisation._skip_company = True
-        if organisation.charity_id not in {str(BOOKTRUST_CHARITY_ID),
-                                           str(PUNCHDRUNK_CHARITY_ID)}:
+        if organisation.charity_id not in {BOOKTRUST_CHARITY_ID,
+                                           PUNCHDRUNK_CHARITY_ID}:
             organisation._skip_charity = True
     current_test_orgs.log_params['folder'] = tmp_path
     current_test_orgs.log_params['level'] = DEBUG
@@ -231,12 +231,20 @@ def test_both_no_hop(current_test_orgs, tmp_path, caplog, capsys):
             1]['kinds_ids_dict']['company'] == {BOOKTRUST_COMPANY_ID,
                                                 PUNCHDRUNK_COMPANY_ID}
     assert len(charity_network) == 20
-    assert len(current_test_orgs._charity_runs) == 2
+    assert len(current_test_orgs._charity_runs) == 3
     with open(tmp_path / DEFAULT_LOG_FILE_NAME) as logs:
         assert logs
         # assert logs.readlines() == 'Some string'
     #     assert False
-    # current_test_orgs.write_networks(path=tmp_path)
+    current_test_orgs.write_networks(path=tmp_path)
+    load_org = OrganisationSequence()
+    load_org.read_networks(path=tmp_path)
+    assert current_test_orgs._charity_runs[2] == load_org._charity_runs[0]
+    assert current_test_orgs._company_runs[0] == load_org._company_runs[0]
+    assert (set(current_test_orgs._charity_composed_runs[0].nodes) ==
+            set(load_org._charity_composed_runs[0].nodes))
+    assert (set(current_test_orgs._company_composed_runs[0].nodes) ==
+            set(load_org._company_composed_runs[0].nodes))
 
 
 @pytest.mark.remote_data

@@ -8,8 +8,6 @@ from dataclasses import dataclass, field
 
 from datetime import datetime
 
-from json import dump
-
 from logging import getLogger
 
 from os import PathLike
@@ -23,9 +21,9 @@ from .companies import CompanyNetworkClient, CompanyIDType
 from .charities import (get_charity_network, CharityIDType,
                         CHARITY_NETWORK_KINDS)
 from .utils import (read_csv, file_log_handler, get_kinds_ids_dict,
-                    write_json_graph, read_json_graph,
-                    QueryParameters, RunConfigType, JSON_DATA_PATH,
-                    LOG_TIME_FORMAT)
+                    get_latest_json_file_name, get_network_json_file_name,
+                    write_json_graph, read_json_graph, QueryParameters,
+                    RunConfigType, JSON_DATA_PATH, LOG_TIME_FORMAT)
 
 
 logger = getLogger(__name__)
@@ -64,7 +62,11 @@ class OrganisationEntry:
     def charity_id(self):
         if not hasattr(self, '_charity_id'):
             if self.charity_key_name in self.data:
-                self._charity_id = self.data[self.charity_key_name]
+                if self.data[self.charity_key_name].isdigit():
+                    self._charity_id = int(self.data[self.charity_key_name])
+                else:
+                    # Todo: assess if this will only return ''
+                    self._charity_id = self.data[self.charity_key_name]
             else:
                 return None
         return self._charity_id
@@ -100,8 +102,10 @@ class OrganisationSequence(MutableSequence):
     reset_logs: bool = True
     _charity_runs: Sequence[RunConfigType] = field(default_factory=list)
     _company_runs: Sequence[RunConfigType] = field(default_factory=list)
-    _company_networks_cached: bool = False
+    _charity_composed_runs: Sequence[Graph] = field(default_factory=list)
+    _company_composed_runs: Sequence[Graph] = field(default_factory=list)
     _charity_networks_cached: bool = False
+    _company_networks_cached: bool = False
     __company_client_class: ClassVar[Type[CompanyNetworkClient]] = (
             CompanyNetworkClient
         )
@@ -364,7 +368,8 @@ class OrganisationSequence(MutableSequence):
     def get_composed_company_network(self,
                                      # cache: bool = False,
                                      records: Optional[int] = None,
-                                     start_entry: int = 0,
+                                     # start_entry: int = 0,
+                                     run_index: int = -1,
                                      *args: QueryParameters,
                                      **kwargs: QueryParameters,
                                      ) -> Graph:
@@ -376,26 +381,35 @@ class OrganisationSequence(MutableSequence):
             * Consider adding decorator for managing parameter_states
             * Add a run summary to _company_runs
             * Refactor to use self.company_ids
+            * Ensure adding composed_runs doesn't aggregate extraneously
         """
         if self._company_networks_cached:
-            return compose_all(graph for _, graph in
-                               self.get_company_networks(*args, **kwargs))
+            if not self._company_composed_runs:
+                self._company_composed_runs.append(compose_all(
+                    graph for _, graph
+                    in self.get_company_networks(*args, **kwargs)))
+            return self._company_composed_runs[run_index]
         # elif cache:
         #     logging.warning("Caching results during query so company_network"
         #                     "components are increasing in size in the order "
         #                     "they are queried, in this case starting with"
         #                     f"{self[0]} and ending with {self[-1]}.")
         else:
-            initial_parameter_state = self.company_client._parameter_state
-            prior_runs = len(self.company_client._runs)
+            initial_parameter_state: QueryParameters = (
+                    self.company_client._parameter_state
+                    )
+            # Todo: assess whether to use self._company_runs instead
+            prior_runs: int = len(self.company_client._runs)
 
-            composed_graph = self.company_client.get_composed_network(
+            composed_graph: Graph = self.company_client.get_composed_network(
                 root_company_ids=self.active_company_ids,
                 parameter_states=(
                     {'compose_queried_networks': True, '_reset_cache': False}
                     for o in self.active_company_ids),
                 *args, **kwargs)
 
+            self._company_composed_runs.append(composed_graph)
+            # Todo: ensure this doesn't end up including unhelpful runs
             self._company_runs.append({
                 'composed_runs': [r for r in
                                   self.company_client._runs[prior_runs:]]})
@@ -404,17 +418,25 @@ class OrganisationSequence(MutableSequence):
             return composed_graph
 
     # @property
-    def get_composed_charity_network(self, *args: QueryParameters,
+    def get_composed_charity_network(self,
+                                     run_index: int = -1,
+                                     *args: QueryParameters,
                                      # records: Optional[int] = None,
                                      # start_entry: int = 0,
                                      **kwargs: QueryParameters) -> Graph:
         """Iterate over charities, compose networks and return."""
         try:
             if not self._charity_networks_cached:
-                return compose_all(graph for _, graph in
-                                   self.get_charity_networks())
-            return compose_all(n.charity_network for n in self
-                               if hasattr(n, 'charity_network'))
+                prior_runs: int = len(self._charity_runs)
+                self._charity_composed_runs.append(compose_all(
+                    graph for _, graph in self.get_charity_networks()))
+                self._charity_runs.append({
+                    'composed_runs': [r for r in
+                                      self._charity_runs[prior_runs:]]})
+                return self._charity_composed_runs[-1]
+            return self._charity_composed_runs[run_index]
+            # return compose_all(n.charity_network for n in self
+            #                    if hasattr(n, 'charity_network'))
         except StopIteration:
             logger.warning("No charity networks to compose.")
         # if not hasattr(self, '_charity_network'):
@@ -425,7 +447,7 @@ class OrganisationSequence(MutableSequence):
 
     def get_networks(self,
                      records: Optional[int] = None,
-                     start_entry: int = 0,
+                     # start_entry: int = 0,
                      # branches: Optional[int] = None,
                      # companies: bool = True,
                      # charities: bool = True,
@@ -456,8 +478,8 @@ class OrganisationSequence(MutableSequence):
                     file_log_handler(*args, **{**kwargs, **self.log_params}))
         start = datetime.now()
         logger.info(f'Start: {start.strftime(LOG_TIME_FORMAT)}')
-        if start_entry:
-            logger.info(f'Beginning with record {start_entry}')
+        # if start_entry:
+        #     logger.info(f'Beginning with record {start_entry}')
         try:
             if composed:
                 charity_network = self.get_composed_charity_network(*args,
@@ -492,48 +514,52 @@ class OrganisationSequence(MutableSequence):
         return charity_network, company_network
 
     def _write_network(self,
-                       network_attr_name: str,
-                       logs_attr_name: Optional[str],
-                       run_index: int = -1,  # Defaults to last run
+                       network_type: str,
                        path: PathLike = JSON_DATA_PATH,
-                       config: bool = True) -> None:
-        try:
-            assert hasattr(self, network_attr_name)
-            config_dict: RunConfigType = getattr(self, logs_attr_name)[-1]
-            file_name_suffix: str = (
-                    f'{network_attr_name}-'
-                    f'{config_dict["start_time"].strftime(LOG_TIME_FORMAT)}'
-                    f'.json')
-            write_json_graph(getattr(self, network_attr_name),
-                             path / f'network_{file_name_suffix}')
-            if config:
-                config_path: PathLike = path / f'config_{file_name_suffix}'
-                with open(config_path, "w") as config_file:
-                    dump(config_dict, config_file, default=str)
-        except AttributeError:
-            raise AttributeError("{self} has no {network_attr_name} network "
-                                 "object to save.")
+                       run_index: int = -1,  # Default is most recent
+                       ) -> None:
+        graph: Graph = getattr(self,
+                               f'_{network_type}_composed_runs')[run_index]
+        config_dict: RunConfigType = [r for r in
+                                      getattr(self, f'_{network_type}_runs')
+                                      if 'composed_runs' in r][run_index]
+        json_filename = get_network_json_file_name(network_type)
+        path = path / json_filename
+        write_json_graph(graph, path, config_dict)
 
     def write_networks(self,
                        composed: bool = True,
-                       run_index: int = -1,  # Defaults to last runs
-                       save_run_json: bool = True,
                        charities: bool = True,
                        companies: bool = True,
-                       path: PathLike = None) -> None:
+                       path: PathLike = JSON_DATA_PATH) -> None:
         """Write json files of saved company and/or charity networks."""
         if composed:
             if charities:
-                self._write_network("charities_network", "_charity_runs",
-                                    run_index, run_index)
+                self._write_network("charity", path)
             if companies:
-                self._write_network("companies_network", "_company_runs",
-                                    run_index, run_index)
-        # else:
-        #     for organisation in self:
-        #         if charities:
-        #             self._write_network("charities_network", "_charity_runs",
-        #                                 run_index, save_run_index)
-        #         if companies:
-        #             self._write_network("companies_network", "_company_runs",
-        #                                 run_index, save_run_index)
+                self._write_network("company", path)
+
+    def _read_network(self,
+                      network_type: str,
+                      composed: bool = False,
+                      path: PathLike = JSON_DATA_PATH,
+                      latest: bool = True) -> None:
+        if latest:
+            path = get_latest_json_file_name(network_type, path)
+        graph, metadata = read_json_graph(path, True)
+        getattr(self, f'_{network_type}_composed_runs').append(graph)
+        getattr(self, f'_{network_type}_runs').append(metadata)
+
+    def read_networks(self,
+                      composed: bool = True,
+                      charities: bool = True,
+                      companies: bool = True,
+                      path: PathLike = JSON_DATA_PATH,
+                      latest: bool = True,
+                      add_meta_data: bool = True) -> None:
+        """Read saved graph files."""
+        if composed:
+            if charities:
+                self._read_network("charity", True, path, latest=latest)
+            if companies:
+                self._read_network("company", True, path, latest=latest)

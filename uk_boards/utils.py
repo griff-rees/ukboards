@@ -12,10 +12,11 @@ import logging
 from networkx import Graph, node_link_data, node_link_graph
 
 from os import PathLike
+from os.path import getctime
 
 from pathlib import Path
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Sequence, Union
 
 import requests
 from requests.exceptions import ConnectionError
@@ -35,6 +36,7 @@ JSON_DATA_PATH = Path('data/json')
 LOG_FOLDER = Path('logs/')
 LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
 LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
+JSON_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +50,29 @@ RunConfigType = Dict[str, Optional[Union[List, QueryParameters]]]
 
 JSON_ADDITIONAL_DATA_KEY = 'uk-boards-metadata'
 
+METADATA_DATETIME_KEYS = ['start_time', 'end_time']
 
-def formatted_now_str(date_format: str = LOG_FILENAME_DATE_FORMAT):
+
+def formatted_now_str(date_format: str = LOG_FILENAME_DATE_FORMAT) -> str:
     """Return current time in ``date_format`` format."""
     return datetime.now().strftime(date_format)
 
 
 DEFAULT_LOG_FILE_NAME = f"default_{formatted_now_str()}.log"
+
+
+def get_network_json_file_name(prefix: str = 'charity_',
+                               time: Optional[datetime] = None,
+                               time_format: str = LOG_FILENAME_DATE_FORMAT,
+                               ) -> str:
+    time = time or datetime.now()
+    return f'{prefix}-{time.strftime(time_format)}.json'
+
+
+def get_latest_json_file_name(prefix: str = '',
+                              path: PathLike = JSON_DATA_PATH) -> PathLike:
+    """Return the latest json file in path with prefix."""
+    return max(path.glob(f"{prefix}*.json"), key=getctime)
 
 
 def read_csv(path: PathLike, **kwargs) -> Sequence[DataRowDict]:
@@ -82,14 +100,37 @@ def write_json_graph(graph: Graph,
 def read_json_graph(path: PathLike = JSON_DATA_PATH,
                     additional_data: bool = False,
                     additional_data_key: str = JSON_ADDITIONAL_DATA_KEY
-                    ) -> Graph:
+                    ) -> Union[Graph, Tuple[Graph, Graph]]:
     """Read a json link_data_format file with nodes, edges and attributes."""
     with open(path) as graph_file:
-        json_graph: JSONDict = load(graph_file)
         if additional_data:
+            json_graph: JSONDict = load(graph_file,
+                                        object_hook=json_deserialise)
+            # json_graph = json_deserialise(json_graph)
             return (node_link_graph(json_graph),
                     json_graph[additional_data_key])
-        return node_link_graph(json_graph)
+        return node_link_graph(load(graph_file))
+
+
+def json_deserialise(json_dict: JSONDict,
+                     time_keys: Sequence[str] = METADATA_DATETIME_KEYS,
+                     time_format: str = JSON_DATE_FORMAT,
+                     root_key: str = JSON_ADDITIONAL_DATA_KEY):
+    """Deserialise a JSON Datetime string."""
+    for k, v in json_dict.items():
+        if k in time_keys:
+            json_dict[k] = datetime.strptime(v, time_format)
+        elif type(v) is str:
+            if v.isdigit() and not v.startswith('0'):
+                json_dict[k] = int(v)
+            elif v.startswith('{') and v.endswith('}'):
+                values = v.strip("{}'").split(', ')
+                json_dict[k] = {
+                        int(val) if val.isdigit() and not val.startswith('0')
+                        else val.strip("'") for val in values}
+            elif v == 'set()':
+                json_dict[k] = set()
+    return json_dict
 
 
 def get_ordinance_data(post_code: str) -> requests.Response:
