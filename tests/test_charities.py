@@ -219,7 +219,7 @@ class TestGetCharityNetwork:
         """Test 1 hop query of Tate_Foundation board members."""
         charity_network = get_charity_network(1085314, branches=1,
                                               client=history_client)
-        assert len(charity_network) == 68
+        assert len(charity_network) == 73
         assert is_connected(charity_network)
         tate_foundation, board_members = bipartite.sets(charity_network)
-        assert len(board_members) == 60
+        assert len(board_members) == 64

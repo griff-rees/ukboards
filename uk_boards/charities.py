@@ -9,7 +9,7 @@ import networkx
 
 import os
 
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from zeep import Client, Settings, Plugin
 from zeep.exceptions import Fault
@@ -30,7 +30,7 @@ CHARITY_COMMISSION_API_KEY = os.getenv("CHARITY_COMMISSION_KEY")
 
 CHARITY_NETWORK_KINDS = ('charity', 'trustee')
 
-CharityIDType = Union[str, int]
+CharityIDType = int
 
 
 class CharitiesAuthPlugin(Plugin):
