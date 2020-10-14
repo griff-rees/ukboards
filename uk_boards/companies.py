@@ -49,7 +49,7 @@ COMPANIES_HOUSE_QUERIES_COUNTS_KEYWORD: str = 'items_per_query_list'
 COMPANIES_HOUSE_DEFAULT_PAGINATION: int = 35
 COMPANIES_HOUSE_MAX_OFFICER_PAGINATION: int = 50
 
-CompanyIDType = Union[str, int]
+CompanyIDType = str
 JSONItemsGenerator = Generator[Tuple[str, JSONDict], None, None]
 
 COMPANY_NETWORK_KINDS: Tuple[str, str, str] = ('company', 'officer',
@@ -233,7 +233,7 @@ class CompaniesHousePermissionError(Error):
 def stringify_company_id(company_id: Union[int, str]) -> str:
     """Enforce correct company number as string of length >= 8."""
     company_id = str(company_id)
-    if len(company_id) < 8:
+    if company_id and len(company_id) < 8:
         return company_id.rjust(8, '0')  # Shorter need preceeding '0's
     return company_id
 

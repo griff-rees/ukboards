@@ -147,6 +147,21 @@ class TestCorrectCompanyNumber:
         assert (stringify_company_id(TEST_COMPANY_ID) ==
                 self.CORRECT_COMPANY_ID)
 
+    def test_empty_str(self):
+        """Test empthy str isn't altered."""
+        TEST_COMPANY_ID = ''
+        assert (stringify_company_id(TEST_COMPANY_ID) == '')
+
+    def test_eight_char_int(self):
+        """Test eight character int to company str."""
+        TEST_COMPANY_ID = 10547581
+        assert stringify_company_id(TEST_COMPANY_ID) == '10547581'
+
+    def test_eight_char_str(self):
+        """Test eight character company str."""
+        TEST_COMPANY_ID = '10547581'
+        assert stringify_company_id(TEST_COMPANY_ID) == '10547581'
+
 
 class TestBasicQueries:
 
@@ -541,7 +556,7 @@ def test_mock_caplogs(caplog,
         assert correct_logs[i] == message
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_mock_api_get() -> Callable:
 
     def test_mock_api(requests_mock,
@@ -609,10 +624,15 @@ def test_filter_active_board(requests_mock, test_mock_api_get, caplog) -> None:
     assert caplog.records == []
 
 
+skipped_for_deprecation = pytest.mark.skip("This test is deprecated and "
+                                           "will be removed.")
+
+
 class TestGetCompanyNetwork:
 
     """Test constructing company networks."""
 
+    @skipped_for_deprecation
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_basic_board(self, caplog):
@@ -627,6 +647,7 @@ class TestGetCompanyNetwork:
         basic_officer_tests(company_network)
         assert len(list(filter_caplogs_by_prefix(caplog.messages))) == 0
 
+    @skipped_for_deprecation
     @pytest.mark.skip
     @pytest.mark.xfail
     @pytest.mark.remote_data
@@ -652,6 +673,7 @@ class TestGetCompanyNetwork:
             assert officer_id not in shared_experience_net
         barbican_one_hop_caplog_tests(caplog)
 
+    @skipped_for_deprecation
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_1_branch_enforce_missing_ties(self, caplog):
@@ -673,17 +695,25 @@ class TestGetCompanyNetwork:
         assert {OFFICER_1_ID, OFFICER_2_ID} < barbican_theatre_board
         barbican_one_hop_caplog_tests(caplog)
 
+    @skipped_for_deprecation
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     @pytest.mark.xfail
     def test_0_branch_warning_case(self, caplog):
-        """0 branch query old error on company '01086582', needs fix."""
+        """This test includes some slow query errors.
+
+        Status code 500 emerges from at least officers
+        PuZZ2gZtuYBEYK0liZILh8qKtA8
+        8d_bnTiwfxh8JIr3YfuwkmkWkCg
+
+        """
         company_network = get_company_network('01086582',
                                               branches=1,
                                               enforce_missing_ties=True)
         assert len(company_network) == 1334
         assert len(caplog.records) == 4
 
+    @skipped_for_deprecation
     @pytest.mark.remote_data
     @pytest.mark.skip_if_not_allowed_ip
     def test_CIO_company(self, caplog):
@@ -907,7 +937,7 @@ BARBICAN_SIGNIFICANT_CONTROL_INDIVIDUAL_2 = {
 }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_mock_api_class_get() -> Callable:
 
     def test_mock_api(requests_mock,
@@ -965,8 +995,8 @@ def test_mock_api_class_get() -> Callable:
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-@pytest.fixture
-def test_no_hop_fixture(caplog):
+@pytest.fixture(scope="session")
+def test_no_hop_fixture():
     """Cache a basic 0 hop query and cache for related tests."""
     cn_client = CompanyNetworkClient(enforce_missing_ties=True)
     return cn_client.get_network(PUNCHDRUNK_COMPANY_ID)
@@ -974,8 +1004,8 @@ def test_no_hop_fixture(caplog):
 
 @pytest.mark.remote_data
 @pytest.mark.skip_if_not_allowed_ip
-@pytest.fixture
-def test_1_hop_fixture(caplog):
+@pytest.fixture(scope="session")
+def test_1_hop_fixture():
     """Cache a basic 1 hop query and cache for related tests."""
     cn_client = CompanyNetworkClient(branches=1)
     cn_client.get_network(BARBICAN_THEATRE_COMPANY_ID)
@@ -1165,7 +1195,7 @@ class TestCompanyNetwork:
         assert "04442574" not in company_network  # Disolved company 16/3/2020
         assert (company_network.nodes[PUNCHDRUNK_COMPANY_ID]['name'] ==
                 PUNCHDRUNK_COMPANY_NAME)
-        assert len(company_network) == 127
+        assert len(company_network) == 121
         assert is_connected(company_network)
         for company_id in cn_client._runs[0]['kinds_ids_dict']['company']:
             assert (company_network.nodes[company_id]['data'][
@@ -1288,6 +1318,19 @@ class TestCompanyNetwork:
         assert company_network.nodes[ACCESS_COMPANY_ID]['category'] == (
                 COMPANIES_HOUSE_URI_CODES['CE'])
         assert caplog.records == []
+
+    @skipped_for_deprecation
+    @pytest.mark.remote_data
+    @pytest.mark.skip_if_not_allowed_ip
+    def test_one_hop_long_company_id(self, caplog):
+        """Test company ID 10547581 1-hop query, currently skipped."""
+        cn_client = CompanyNetworkClient(branches=2,
+                                         exclude_resigned_board_members=True,
+                                         exclude_non_active_companies=True,
+                                         include_edge_data=True)
+        LONG_COMPANY_ID = "10547581"
+        company_network = cn_client.get_network(LONG_COMPANY_ID)
+        assert LONG_COMPANY_ID in company_network.nodes
 
     def test_incorrect_company_id(self, requests_mock, test_mock_api_class_get,
                                   caplog):
