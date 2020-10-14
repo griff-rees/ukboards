@@ -72,7 +72,8 @@ def get_network_json_file_name(prefix: str = 'charity_',
 def get_latest_json_file_name(prefix: str = '',
                               path: PathLike = JSON_DATA_PATH) -> PathLike:
     """Return the latest json file in path with prefix."""
-    return max(path.glob(f"{prefix}*.json"), key=getctime)
+    path = Path(path)
+    return max(path.glob(f"*{prefix}*.json"), key=getctime)
 
 
 def read_csv(path: PathLike, **kwargs) -> Sequence[DataRowDict]:
@@ -102,13 +103,13 @@ def read_json_graph(path: PathLike = JSON_DATA_PATH,
                     additional_data_key: str = JSON_ADDITIONAL_DATA_KEY
                     ) -> Union[Graph, Tuple[Graph, Graph]]:
     """Read a json link_data_format file with nodes, edges and attributes."""
+    path = Path(path)
     with open(path) as graph_file:
         if additional_data:
             json_graph: JSONDict = load(graph_file,
                                         object_hook=json_deserialise)
-            # json_graph = json_deserialise(json_graph)
             return (node_link_graph(json_graph),
-                    json_graph[additional_data_key])
+                    json_graph.get(additional_data_key))
         return node_link_graph(load(graph_file))
 
 
@@ -196,7 +197,7 @@ def call_node_func(graph: Optional[Graph],
             func(*node)
     except AttributeError:
         logger.warning(f"{graph} passed which must be a Graph "
-                       f"object so {func} cannot be fun.")
+                       f"object so {func} cannot be run.")
 
 
 def set_node_data_func(graph: Optional[Graph],
