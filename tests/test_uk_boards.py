@@ -14,6 +14,7 @@ from networkx import Graph, connected_components
 from uk_boards.uk_boards import OrganisationSequence
 from uk_boards.utils import (
     DEFAULT_LOG_FILE_NAME,
+    NoMatchingDataPathError,
     call_node_func,
     ordinance_wrapper,
 )
@@ -400,6 +401,16 @@ def test_one_hop(current_test_orgs, caplog):
     )
     assert len(charity_network) == 83
     assert len(current_test_orgs._charity_runs) == 2
+
+
+def test_auto_load_json_error(two_current_orgs, tmp_path, caplog):
+    """Test raising error if no json files are found."""
+    ERROR_MESSAGE_START: str = "No path '"
+    ERROR_MESSAGE_END: str = "' contains files matching prefix: 'charity'."
+    with pytest.raises(NoMatchingDataPathError) as excinfo:
+        two_current_orgs.read_networks(path=tmp_path, latest=True)
+    assert ERROR_MESSAGE_START in str(excinfo.value)
+    assert ERROR_MESSAGE_END in str(excinfo.value)
 
 
 def test_load_network_json_and_ego_networks(two_current_orgs, caplog):

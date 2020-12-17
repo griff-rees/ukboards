@@ -102,7 +102,10 @@ def get_latest_json_file_name(
 ) -> PathLike:
     """Return the latest json file in path with prefix."""
     path = Path(path)
-    return max(path.glob(f"*{prefix}*.json"), key=getctime)
+    try:
+        return max(path.glob(f"*{prefix}*.json"), key=getctime)
+    except ValueError:
+        raise NoMatchingDataPathError(path=path, prefix=prefix)
 
 
 def read_csv(path: PathLike, **kwargs) -> Iterator[CSVRowType]:
@@ -372,12 +375,23 @@ class NoLoadedNetworkDataError(Error):
     """Exception if calculating ego networks prior to loading network data."""
 
     DEFAULT_MESSAGE = (
-        "Network data must be loaded prior to calculating ego " "networks."
+        "Network data must be loaded prior to calculating ego networks."
     )
 
     def __init__(self, msg: str = DEFAULT_MESSAGE, *args, **kwargs) -> None:
         """Add msg = DEFAULT_MESSAGE to standard Exception __init__."""
         super().__init__(msg)
+
+
+class NoMatchingDataPathError(Error):
+    """Exception of no existing path for saving or loading data."""
+
+    def __init__(self, msg: Optional[str] = None, path: PathLike = Path(), prefix: str = "") -> None:
+        """Raise error of ``path`` and ``prefix`` failing to match files."""
+        self.msg = msg or f"No path '{path}' contains files matching prefix: '{prefix}'."
+        self.path = path
+        self.prefix = prefix
+        super().__init__(self.msg)
 
 
 def get_external_ip_address(
