@@ -11,7 +11,7 @@ History
 0.3.0 (2019-12-18)
 ------------------
 
-* Add Charity Commission API querying via zeep library 
+* Add Charity Commission API querying via zeep library
 * Include Charity Commision API specification
 * Refactor command line interface
 

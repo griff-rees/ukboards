@@ -386,7 +386,8 @@ class NoLoadedNetworkDataError(Error):
 class NoMatchingDataPathError(Error):
     """Exception of no existing path for saving or loading data."""
 
-    def __init__(self, msg: Optional[str] = None, path: PathLike = Path(), prefix: str = "") -> None:
+    def __init__(self, msg: Optional[str] = None, path: PathLike = Path(),
+                 prefix: str = "") -> None:
         """Raise error of ``path`` and ``prefix`` failing to match files."""
         self.msg = msg or f"No path '{path}' contains files matching prefix: '{prefix}'."
         self.path = path
