@@ -3,8 +3,8 @@ UK Boards
 =========
 
 
-.. image:: https://img.shields.io/pypi/v/uk_boards.svg
-        :target: https://pypi.python.org/pypi/uk_boards
+.. image:: https://img.shields.io/pypi/v/uk-boards.svg
+        :target: https://pypi.python.org/pypi/uk-boards
 
 .. image:: https://img.shields.io/travis/griff-rees/uk-boards.svg
         :target: https://travis-ci.org/griff-rees/uk-boards
@@ -17,8 +17,8 @@ UK Boards
         :target: https://pyup.io/repos/github/griff-rees/uk-boards/
         :alt: Updates
 
-.. image:: https://img.shields.io/pypi/pyversions/uk_boards.svg
-        :target: https://img.shields.io/pypi/pyversions/uk_boards
+.. image:: https://img.shields.io/pypi/pyversions/uk-boards.svg
+        :target: https://img.shields.io/pypi/pyversions/uk-boards
         :alt: Supported Python Versions
 
 .. image:: https://codecov.io/gh/griff-rees/uk-boards/branch/master/graph/badge.svg
