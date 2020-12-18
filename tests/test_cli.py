@@ -19,7 +19,7 @@ PUNCHDRUNK_JSON_SUBSET: Final[
 CORRECT_HELP = """\
 Usage: uk_boards [OPTIONS] COMMAND [ARGS]...
 
-  Console script for uk_boards.
+  Query UK company and charity board data.
 
 Options:
   -a, --api-keys-path FILE  Path to file with API keys (default=.env)
@@ -29,9 +29,10 @@ Options:
   --help                    Show this message and exit.
 
 Commands:
-  charity            Query Charities Commision by registered charity number.
-  company            Query Companies House by company number.
-  csv-organisations  Path to csv with company and charity numbers."""
+  charity            Query Charities Commision by charity id.
+  company            Query Companies House by company id.
+  csv-organisations  Path to csv with company and charity ids.
+"""
 
 
 @pytest.fixture
@@ -72,9 +73,9 @@ class TestCompaniesCommandLineInterface:
     COMPANIES_HELP: Final[
         str
     ] = """\
-    Usage: uk_boards company [OPTIONS] COMPANY_NUMBER
+    Usage: uk_boards company [OPTIONS] COMPANY_ID
 
-      Query Companies House by company number.
+      Query Companies House by company id.
 
     Options:
       -k, --api-key TEXT
@@ -107,9 +108,9 @@ class TestCharitiesCommandLineInterface:
     """Test Charity command line options."""
 
     CHARITIES_HELP: str = """\
-    Usage: uk_boards charity [OPTIONS] CHARITY_NUMBER
+    Usage: uk_boards charity [OPTIONS] CHARITY_ID
 
-      Query Charities Commision by registered charity number.
+      Query Charities Commision by charity id.
 
     Options:
       -k, --api-key TEXT

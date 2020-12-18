@@ -13,12 +13,14 @@ from zeep import Client
 
 from .charities import (
     CHARITY_COMMISSION_API_KEY,
-    CHARITY_COMMISSION_API_KEY_NAME,
+    CHARITY_COMMISSION_API_KEY_ENV_NAME,
+    CharityIDType,
     get_client,
 )
 from .companies import (
     COMPANIES_HOUSE_API_KEY,
-    COMPANIES_HOUSE_API_KEY_NAME,
+    COMPANIES_HOUSE_API_KEY_ENV_NAME,
+    CompanyIDType,
     companies_house_query,
 )
 from .utils import (
@@ -56,11 +58,7 @@ logger = getLogger(__name__)
 def uk_boards(
     ctx: click.Context, indent: int, api_keys_path: click.Path
 ) -> int:
-    """Console interface for uk_boards.
-
-    Todo:
-        * Add opitions for generating an .env file for API keys
-    """
+    """Query UK company and charity board data."""
     ctx.ensure_object(dict)
     if api_keys_path:
         try:
@@ -69,6 +67,7 @@ def uk_boards(
                 ctx.obj[key_name] = key
         except FileNotFoundError:
             pass
+            # Todo: * Add opitions for generating an .env file for API keys.
             # path = input("No file provided for Companies House or "
             #              "Charities Commission API keys. Press enter to "
             #              f"create a default '{DEFAULT_API_KEY_PATH}' file "
@@ -79,7 +78,7 @@ def uk_boards(
 
 
 @uk_boards.command()
-@click.argument("charity_number", type=str, nargs=1)
+@click.argument("charity_id", type=CharityIDType, nargs=1)
 @click.option(
     "--api-key",
     "-k",
@@ -89,19 +88,21 @@ def uk_boards(
     default=CHARITY_COMMISSION_API_KEY,
 )
 @click.pass_context
-def charity(ctx: click.Context, charity_number: str, api_key: str) -> None:
-    """Query Charities Commision by registered charity number."""
-    if CHARITY_COMMISSION_API_KEY_NAME in ctx.obj:
+def charity(
+    ctx: click.Context, charity_id: CharityIDType, api_key: CharityAPIKeyType
+) -> None:
+    """Query Charities Commision by charity id."""
+    if CHARITY_COMMISSION_API_KEY_ENV_NAME in ctx.obj:
         api_key = ctx.obj[CHARITY_COMMISSION_API_KEY]
     client: Client = get_client(api_key_value=api_key)
     charity_data = client.service.GetCharityByRegisteredCharityNumber(
-        registeredCharityNumber=charity_number,
+        registeredCharityNumber=charity_id,
     )
     click.echo(charity_data)
 
 
 @uk_boards.command()
-@click.argument("company_number", type=str, nargs=1)
+@click.argument("company_id", type=CompanyIDType, nargs=1)
 @click.option(
     "--api-key",
     "-k",
@@ -111,12 +112,14 @@ def charity(ctx: click.Context, charity_number: str, api_key: str) -> None:
     default=COMPANIES_HOUSE_API_KEY,
 )
 @click.pass_context
-def company(ctx: click.Context, company_number: str, api_key: str) -> None:
-    """Query Companies House by company number."""
-    if COMPANIES_HOUSE_API_KEY_NAME in ctx.obj:
-        api_key = ctx.obj[COMPANIES_HOUSE_API_KEY_NAME]
+def company(
+    ctx: click.Context, company_id: CompanyIDType, api_key: CompanyAPIKeyType
+) -> None:
+    """Query Companies House by company id."""
+    if COMPANIES_HOUSE_API_KEY_ENV_NAME in ctx.obj:
+        api_key = ctx.obj[COMPANIES_HOUSE_API_KEY_ENV_NAME]
     company_json: Optional[JSONDict] = companies_house_query(
-        f"/company/{company_number}", auth_key=api_key
+        f"/company/{company_id}", auth_key=api_key
     )
     click.echo(dumps(company_json, indent=ctx.obj["indent"]))
 
@@ -124,7 +127,7 @@ def company(ctx: click.Context, company_number: str, api_key: str) -> None:
 @uk_boards.command()
 @click.argument("csv_path", type=click.Path(exists=True), nargs=1)
 def csv_organisations(csv_path: click.Path):
-    """Path to csv with company and charity numbers."""
+    """Path to csv with company and charity ids."""
     pass
 
 

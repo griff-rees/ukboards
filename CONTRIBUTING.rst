@@ -4,8 +4,7 @@
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
-helps, and credit will always be given.
+Contributions are welcome. Every little bit helps and keeping contributions updated and credited is a curcial part of open source software.
 
 You can contribute in many ways:
 
@@ -15,7 +14,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/spool/uk_boards/issues.
+Report bugs at https://github.com/griff-rees/uk-boards/issues.
 
 If you are reporting a bug, please include:
 
@@ -45,7 +44,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/spool/uk_boards/issues.
+The best way to send feedback is to file an issue at https://github.com/griff-rees/uk-boards/issues.
 
 If you are proposing a feature:
 
@@ -57,33 +56,47 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `uk_boards` for local development.
+Ready to contribute? Here's how to set up `uk-boards` for local development.
 
-1. Fork the `uk_boards` repo on GitHub.
+1. Fork the `uk-boards` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/uk_boards.git
+    $ git clone git@github.com:your_name_here/uk-boards.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local fork with a local environment and pre-commit
+   configuration. There are a number of options for this. If you have
+   virtualenvwrapper this should work for setting up local development::
 
-    $ mkvirtualenv uk_boards
-    $ cd uk_boards/
+    $ mkvirtualenv uk-boards
+    $ cd uk-boards/
     $ python setup.py develop
+    $ pre-commit install
+
+   If you have `pipenv` (and something similar should work for `poetry`)::
+
+    $ pipenv install -r requirements.txt -r requirements_dev.txt
+    $ pipenv run pre-commit install
+
+   Either option should mean you've got an isolated environment to fork
+   and test your contributions. If you've got issues with this setup then
+   it'd be great if you can copy the error messages into a new ticket so we
+   can help you get setup for contributing.
 
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
-   Now you can make your changes locally.
+   Now you can make your changes locally, and please add tests within the
+   ``tests/`` folder to cover your contribution. This helps us keep
+   maintain new features and fixes.
 
-5. When you're done making changes, check that your changes pass flake8 and the
+5. When you're done making changes, check that your changes pass the
    tests, including testing other Python versions with tox::
 
-    $ flake8 uk_boards tests
-    $ python setup.py test or pytest
+    $ python pytest
     $ tox
 
-   To get flake8 and tox, just pip install them into your virtualenv.
+   Both these packages should be in the ``requirements_dev.txt`` file.
 
 6. Commit your changes and push your branch to GitHub::
 
@@ -103,7 +116,7 @@ Before you submit a pull request, check that it meets these guidelines:
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
 3. The pull request should work for Python 3.7 and 3.8, and for PyPy. Check
-   https://travis-ci.org/spool/uk_boards/pull_requests
+   https://travis-ci.org/griff-rees/uk-boards/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
 Tips

@@ -42,4 +42,4 @@ The Charities Commission API does not specify an IP address but also requires a 
 Trouble Shooting
 ----------------
 
-This is an `alpha` level library and much change is planned. Do consider posting issues on the `git repository <https://github.com/spool/uk_boards/issues>`_. Thanks very much.
+This is an `alpha` level library and much change is planned. Do consider posting issues on the `git repository <https://github.com/griff-rees/uk-boards/issues>`_. Thanks very much.

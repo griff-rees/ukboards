@@ -290,7 +290,7 @@ def get_kinds_ids_dict(graph: Graph, kinds: Tuple[str, ...]) -> KindsDict:
     """Return a dicts of ids of each kind.
 
     In the case of Companies House companies there are companies, board members
-    and controllers. See uk_boards.companeis.COMPANEY_NETWORK_KINDS
+    and controllers. See uk_boards.companies.COMPANEY_NETWORK_KINDS
     """
     kind_dict: KindsDict = {k: set() for k in kinds}
     for node_id, data in graph.nodes(data=True):

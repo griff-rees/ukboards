@@ -12,11 +12,11 @@ with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
 requirements = [
-    "Click>=7.0",
+    "Click>=7.1",
     "networkx>=2.4",
     "requests>=2.22.0",
-    "zeep>=3.4.0",
-    "python-dotenv>=0.10.3",
+    "zeep>=4.0.0",
+    "python-dotenv>=0.15.0",
 ]
 
 setup_requirements = ["pytest-runner"]

@@ -55,9 +55,9 @@ load_dotenv(dotenv_path=DEFAULT_API_KEY_PATH)
 
 
 COMPANIES_HOUSE_URL: Final[str] = "https://api.companieshouse.gov.uk"
-COMPANIES_HOUSE_API_KEY_NAME: Final[str] = "COMPANIES_HOUSE_KEY"
+COMPANIES_HOUSE_API_KEY_ENV_NAME: Final[str] = "COMPANIES_HOUSE_KEY"
 COMPANIES_HOUSE_API_KEY: Final[Optional[str]] = getenv(
-    COMPANIES_HOUSE_API_KEY_NAME
+    COMPANIES_HOUSE_API_KEY_ENV_NAME
 )
 
 COMPANY_SUFFIXES: Final[Tuple[str, str, str]] = (
@@ -293,7 +293,7 @@ class CompaniesHousePermissionError(Error):
         return (
             f"Query: {self.query}\nreturned a 403 (forbidden) error. "
             "If that query seems correct, check the "
-            f"{COMPANIES_HOUSE_API_KEY_NAME} is set in your local .env "
+            f"{COMPANIES_HOUSE_API_KEY_ENV_NAME} is set in your local .env "
             "file.\n"
             "If both are correct, check the external IP address of "
             f"this computer ({ip_address}) is included in the list of "

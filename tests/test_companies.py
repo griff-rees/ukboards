@@ -19,7 +19,7 @@ from networkx import (
 from networkx.algorithms import bipartite
 
 from uk_boards.companies import (
-    COMPANIES_HOUSE_API_KEY_NAME,
+    COMPANIES_HOUSE_API_KEY_ENV_NAME,
     COMPANIES_HOUSE_APPOINTED_KEYWORD,
     COMPANIES_HOUSE_CEASED_KEYWORD,
     COMPANIES_HOUSE_RESIGNATION_KEYWORD,
@@ -210,7 +210,7 @@ class TestBasicQueries:
             f"Query: /company/{PUNCHDRUNK_COMPANY_ID}\n"
             "returned a 403 (forbidden) error. If that "
             "query seems correct, check the "
-            f"{COMPANIES_HOUSE_API_KEY_NAME} is set in "
+            f"{COMPANIES_HOUSE_API_KEY_ENV_NAME} is set in "
             f"your local {DEFAULT_API_KEY_PATH} file.\n"
             "If both are correct, check the external IP "
             "address of this computer "
