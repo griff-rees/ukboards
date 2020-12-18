@@ -8,13 +8,13 @@ from logging import getLogger
 from os import getenv
 from typing import Final, List, Optional, Tuple, Union
 
-import networkx
 from dotenv import load_dotenv
+from networkx import Graph, compose, is_bipartite
 from zeep import Client, Plugin, Settings
 from zeep.exceptions import Fault
 from zeep.helpers import serialize_object
 
-from .utils import DEFAULT_API_KEY_PATH, RunConfig
+from .utils import DEFAULT_API_KEY_PATH, CharityAPIKeyType, RunConfig
 
 logger = getLogger(__name__)
 
@@ -27,7 +27,7 @@ CHARITY_COMMISSION_WSDL = (
 )
 
 CHARITY_COMMISSION_API_KEY_NAME: Final[str] = "APIKey"
-CHARITY_COMMISSION_API_KEY: Final[Optional[str]] = getenv(
+CHARITY_COMMISSION_API_KEY: Final[Optional[CharityAPIKeyType]] = getenv(
     "CHARITY_COMMISSION_KEY"
 )
 
@@ -43,7 +43,9 @@ class CharitiesAuthPlugin(Plugin):
     def __init__(
         self,
         api_key_name: str = CHARITY_COMMISSION_API_KEY_NAME,
-        api_key_value: Optional[str] = CHARITY_COMMISSION_API_KEY,
+        api_key_value: Optional[
+            CharityAPIKeyType
+        ] = CHARITY_COMMISSION_API_KEY,
     ) -> None:
         """Initialise api_key_name and api_key_value."""
         self.api_key_name = api_key_name
@@ -71,12 +73,12 @@ def get_client(
     wsdl: str = CHARITY_COMMISSION_WSDL,
     raw_response: bool = False,
     api_key_name: str = CHARITY_COMMISSION_API_KEY_NAME,
-    api_key_value: Optional[str] = CHARITY_COMMISSION_API_KEY,
+    api_key_value: Optional[CharityAPIKeyType] = CHARITY_COMMISSION_API_KEY,
     plugins: List[Plugin] = None,
     **kwargs,
 ) -> Client:
     """Generate a Client for querying Charities Commision API."""
-    settings = Settings(
+    settings: Settings = Settings(
         strict=False, xml_huge_tree=True, raw_response=raw_response
     )
     plugins = (
@@ -89,8 +91,8 @@ def get_client(
 
 def check_registered_charity_number(
     name: str,
-    charity_number: int,
-    client: Client = None,
+    charity_number: CharityIDType,
+    client: Optional[Client] = None,
 ) -> int:
     """Check if registered charity_number matches searched name."""
     if not client:
@@ -112,14 +114,14 @@ def check_registered_charity_number(
 def get_charity_network(
     charity_number: CharityIDType = 1085314,  # TATE
     branches: int = 0,  # FOUNDATION
-    client: Client = None,
+    client: Optional[Client] = None,
     api_key: Optional[str] = CHARITY_COMMISSION_API_KEY,
     test_name: str = None,
     *args,
     **kwargs,
-) -> Optional[networkx.Graph]:
+) -> Optional[Graph]:
     """Query Charity Commission API for board interlock network."""
-    g = networkx.Graph()
+    g: Graph = Graph()
     if not client:
         client = get_client(api_key_value=api_key)
     assert isinstance(charity_number, int)
@@ -202,9 +204,9 @@ def get_charity_network(
                             *args,
                             **kwargs,
                         )
-                        assert networkx.is_bipartite(subgraph)
-                        g = networkx.compose(g, subgraph)
-                        assert networkx.is_bipartite(g)
+                        assert is_bipartite(subgraph)
+                        g = compose(g, subgraph)
+                        assert is_bipartite(g)
     return g
 
 

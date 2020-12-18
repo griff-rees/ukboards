@@ -3,35 +3,38 @@
 
 """Test querying Charities Commision API."""
 
-from networkx import is_connected
-from networkx.algorithms import bipartite
-
-import pytest
-
+from typing import Final
 from xml.etree import ElementTree
 
+import pytest
+from networkx import is_connected
+from networkx.algorithms import bipartite
 from zeep.plugins import HistoryPlugin
 
-from uk_boards.charities import (check_registered_charity_number, get_client,
-                                 get_charity_network,
-                                 CharitiesAuthPlugin, CHARITY_COMMISSION_WSDL)
+from uk_boards.charities import (
+    CHARITY_COMMISSION_WSDL,
+    CharitiesAuthPlugin,
+    check_registered_charity_number,
+    get_charity_network,
+    get_client,
+)
 
+CHARITY_COMMISSION_API: Final[str] = CHARITY_COMMISSION_WSDL.split("?")[0]
 
-CHARITY_COMMISSION_API = CHARITY_COMMISSION_WSDL.split('?')[0]
-
-TEST_PHOTOGRAPHERS_GALLERY_NAME = (
+TEST_PHOTOGRAPHERS_GALLERY_NAME: str = (
     "THE PHOTOGRAPHERS' GALLERY LTD                    "
     "                                                  "
-    "                                                  ")
+    "                                                  "
+)
 
-TEST_TAG_NS = "http://www.charitycommission.gov.uk/"
+TEST_TAG_NS: str = "http://www.charitycommission.gov.uk/"
 
 TEST_PHOTOGRAPHERS_CHARITY_NUMBER = 262548
 
 TEST_API_KEY = "A-fake-test-key"
 
 TATE_FOUNDATION_ID = 1085314
-TATE_FOUNDATION_NAME = 'TATE FOUNDATION'
+TATE_FOUNDATION_NAME = "TATE FOUNDATION"
 
 
 @pytest.fixture
@@ -39,7 +42,7 @@ def test_client(requests_mock, maxlen: int = 20):
     """A mock test client using the 19/12/2019 Charties Commission API."""
     history = HistoryPlugin(maxlen=maxlen)
     auth = CharitiesAuthPlugin(api_key_value=TEST_API_KEY)
-    with open('tests/charities_api.wsdl', 'r') as charities_api:
+    with open("tests/charities_api.wsdl", "r") as charities_api:
         requests_mock.get(CHARITY_COMMISSION_WSDL, text=charities_api.read())
         client = get_client(plugins=[history, auth])
         assert hasattr(client.service, "GetCharitiesByName")
@@ -57,12 +60,11 @@ def history_client(maxlen: int = 20):
 
 
 class TestZeepCharityClient:
-
     """Test generating a zeep `Client` object for Charity Commision API."""
 
     def test_specify_config(self, requests_mock):
         """Basic test of generating correct Client configuration."""
-        TEST_WSDL_CODE = 'http://a-test-api-code.uk/apiTest.asmx?wsdl'
+        TEST_WSDL_CODE = "http://a-test-api-code.uk/apiTest.asmx?wsdl"
 
         TEST_SOAP_ENV = """\
         <soapenv:Envelope
@@ -85,12 +87,10 @@ class TestZeepCharityClient:
 
     def test_mock_get_charity_by_name(self, requests_mock, test_client):
         """Test mock query of GetCharitiesByName."""
+        TEST_EMAIL: str = "an.email@test.org.uk"
+        TEST_PHONE_NUMBER: str = "02075555555"
 
-        TEST_EMAIL = 'an.email@test.org.uk'
-
-        TEST_PHONE_NUMBER = '02075555555'
-
-        TEST_SOAP_RESPONSE = f"""\
+        TEST_SOAP_RESPONSE: str = f"""\
         <?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -128,17 +128,21 @@ class TestZeepCharityClient:
 
         requests_mock.post(CHARITY_COMMISSION_API, text=TEST_SOAP_RESPONSE)
         response = test_client.service.GetCharitiesByName(
-            strSearch=TEST_PHOTOGRAPHERS_GALLERY_NAME)
-        assert response[0]['CharityName'].strip() == (
-            TEST_PHOTOGRAPHERS_GALLERY_NAME.rstrip())
-        assert response[0]['RegisteredCharityNumber'] == (
-            TEST_PHOTOGRAPHERS_CHARITY_NUMBER)
-        assert response[0]['PublicEmailAddress'].strip() == TEST_EMAIL
-        assert response[0]['MainPhoneNumber'].strip() == TEST_PHONE_NUMBER
+            strSearch=TEST_PHOTOGRAPHERS_GALLERY_NAME
+        )
+        assert response[0]["CharityName"].strip() == (
+            TEST_PHOTOGRAPHERS_GALLERY_NAME.rstrip()
+        )
+        assert response[0]["RegisteredCharityNumber"] == (
+            TEST_PHOTOGRAPHERS_CHARITY_NUMBER
+        )
+        assert response[0]["PublicEmailAddress"].strip() == TEST_EMAIL
+        assert response[0]["MainPhoneNumber"].strip() == TEST_PHONE_NUMBER
 
         history = test_client.plugins[0]
-        assert history.last_received['envelope'][0][0].tag.endswith(
-            'GetCharitiesByNameResponse')
+        assert history.last_received["envelope"][0][0].tag.endswith(
+            "GetCharitiesByNameResponse"
+        )
         assert len(history._buffer) == 1
 
     @pytest.mark.remote_data
@@ -147,9 +151,10 @@ class TestZeepCharityClient:
         history = history_client.plugins[0]
         with history_client.settings(raw_response=True):
             raw_response = history_client.service.GetCharitiesByName(
-                strSearch='TATE GALLERY FOUNDATION')
+                strSearch="TATE GALLERY FOUNDATION"
+            )
             assert raw_response.status_code == 200
-            with open('tests/charity_soap.wsdl', 'rb') as test_output:
+            with open("tests/charity_soap.wsdl", "rb") as test_output:
                 test_tree = ElementTree.fromstring(test_output.read())
                 resp_tree = ElementTree.fromstring(raw_response.content)
                 assert test_tree.tag == resp_tree.tag
@@ -159,27 +164,31 @@ class TestZeepCharityClient:
                             break
                     if resp.text:
                         assert resp.text.strip() == test.text.strip()
-        assert history.last_sent['envelope'][0][0].tag.endswith(
-            'GetCharitiesByName')
+        assert history.last_sent["envelope"][0][0].tag.endswith(
+            "GetCharitiesByName"
+        )
         assert len(history._buffer) == 1
         response = history_client.service.GetCharitiesByName(
-            strSearch='TATE GALLERY FOUNDATION')
-        assert response[0]['CharityName'].rstrip() == (
-            'THE TATE GALLERY FOUNDATION')
-        assert history.last_received['envelope'][0][0].tag.endswith(
-            'GetCharitiesByNameResponse')
+            strSearch="TATE GALLERY FOUNDATION"
+        )
+        assert response[0]["CharityName"].rstrip() == (
+            "THE TATE GALLERY FOUNDATION"
+        )
+        assert history.last_received["envelope"][0][0].tag.endswith(
+            "GetCharitiesByNameResponse"
+        )
         assert len(history._buffer) == 2
 
 
 class TestGetCharityNumber:
-
     """Test querying basic charity data."""
 
     @pytest.mark.remote_data
     def test_check_registered_charity_number(self):
         """Test on Photography's Gallery Limited."""
         charity = check_registered_charity_number(
-            TEST_PHOTOGRAPHERS_GALLERY_NAME, TEST_PHOTOGRAPHERS_CHARITY_NUMBER)
+            TEST_PHOTOGRAPHERS_GALLERY_NAME, TEST_PHOTOGRAPHERS_CHARITY_NUMBER
+        )
         # charity = check_registered_charity_number(correct_charity_name,
         #                                           correct_charity_number,
         #                                           client=history_client)
@@ -187,22 +196,25 @@ class TestGetCharityNumber:
 
 
 class TestGetCharityNetwork:
-
     """Test Contructing a Charity Network."""
 
     @pytest.mark.remote_data
     def test_tate_foundation(self, history_client):
         """Test basic query of Tate_Foundation board members."""
-        charity_network = get_charity_network(TATE_FOUNDATION_ID,
-                                              client=history_client)
+        charity_network = get_charity_network(
+            TATE_FOUNDATION_ID, client=history_client
+        )
         assert len(charity_network) == 15
         assert is_connected(charity_network)
         tate_foundation, board_members = bipartite.sets(charity_network)
         assert len(board_members) == 14
-        assert (charity_network.nodes[TATE_FOUNDATION_ID]['name'] ==
-                TATE_FOUNDATION_NAME)
-        assert charity_network.nodes[11965582]['name'] == ("Dr Maria "
-                                                           "Jane Balshaw")
+        assert (
+            charity_network.nodes[TATE_FOUNDATION_ID]["name"]
+            == TATE_FOUNDATION_NAME
+        )
+        assert charity_network.nodes[11965582]["name"] == (
+            "Dr Maria " "Jane Balshaw"
+        )
 
     @pytest.mark.remote_data
     def test_tate_foundation_str_id(self, history_client):
@@ -217,8 +229,9 @@ class TestGetCharityNetwork:
     @pytest.mark.remote_data
     def test_1hop_tate(self, history_client):
         """Test 1 hop query of Tate_Foundation board members."""
-        charity_network = get_charity_network(1085314, branches=1,
-                                              client=history_client)
+        charity_network = get_charity_network(
+            1085314, branches=1, client=history_client
+        )
         assert len(charity_network) == 73
         assert is_connected(charity_network)
         tate_foundation, board_members = bipartite.sets(charity_network)

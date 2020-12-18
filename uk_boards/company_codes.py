@@ -1,5 +1,4 @@
-"""
-Lists of company code prefixes
+"""Lists of company code prefixes.
 
 NOT_LISTED_IN_COMPANIES_HOUSE_DOCUMENTATION
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -13,7 +12,6 @@ http://www.companieshouse.gov.uk/about/pdf/uniformResourceIdentifiersCustomerGui
 "CE010135" is an example of of a Chartiable incorporated organisation that is
 referred to in Companies House but that prefix is not listed on the official
 documentation.
-
 """
 
 NOT_LISTED_IN_COMPANIES_HOUSE_DOCUMENTATION = {
@@ -50,7 +48,7 @@ PreviousNames where the company has not changed its name.
 """
 
 DATA_AVAILABLE = {
-    "":   "England & Wales Company",
+    "": "England & Wales Company",
     "AC": "Assurance Company for England & Wales",
     "ZC": "Unregistered Companies (S 1043 - Not Cos Act for England & Wales",
     "FC": "Overseas Company",
@@ -77,6 +75,8 @@ DATA_AVAILABLE = {
     "EN": "European Company (Societas Europaea for Northern Ireland",
 }
 
-COMPANIES_HOUSE_URI_CODES = {**NOT_LISTED_IN_COMPANIES_HOUSE_DOCUMENTATION,
-                             **ONLY_COMPANY_NAME_AND_NUMBER,
-                             **DATA_AVAILABLE}
+COMPANIES_HOUSE_URI_CODES = {
+    **NOT_LISTED_IN_COMPANIES_HOUSE_DOCUMENTATION,
+    **ONLY_COMPANY_NAME_AND_NUMBER,
+    **DATA_AVAILABLE,
+}

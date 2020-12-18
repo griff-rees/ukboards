@@ -46,6 +46,12 @@ METADATA_DATETIME_KEYS = ["start_time", "end_time"]
 
 logger = getLogger(__name__)
 
+CharityAPIKeyType = str
+CompanyAPIKeyType = str
+APIKeyDictType = Dict[
+    str, Optional[Union[CharityAPIKeyType, CompanyAPIKeyType]]
+]
+
 QueryValueTypes = Optional[Union[str, bool, int, List]]
 QueryParameters = Dict[str, QueryValueTypes]
 
@@ -386,10 +392,17 @@ class NoLoadedNetworkDataError(Error):
 class NoMatchingDataPathError(Error):
     """Exception of no existing path for saving or loading data."""
 
-    def __init__(self, msg: Optional[str] = None, path: PathLike = Path(),
-                 prefix: str = "") -> None:
+    def __init__(
+        self,
+        msg: Optional[str] = None,
+        path: PathLike = Path(),
+        prefix: str = "",
+    ) -> None:
         """Raise error of ``path`` and ``prefix`` failing to match files."""
-        self.msg = msg or f"No path '{path}' contains files matching prefix: '{prefix}'."
+        self.msg = (
+            msg
+            or f"No path '{path}' contains files matching prefix: '{prefix}'."
+        )
         self.path = path
         self.prefix = prefix
         super().__init__(self.msg)
