@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for `uk_boards` package."""
+"""Tests for `ukboards` package."""
 
 from logging import DEBUG, INFO
 from os import PathLike
@@ -11,8 +11,8 @@ from typing import Final
 import pytest
 from networkx import Graph, connected_components
 
-from uk_boards.uk_boards import OrganisationSequence
-from uk_boards.utils import (
+from ukboards.ukboards import OrganisationSequence
+from ukboards.utils import (
     DEFAULT_LOG_FILE_NAME,
     NoMatchingDataPathError,
     call_node_func,

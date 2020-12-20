@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Console script for uk_boards."""
+"""Console script for ukboards."""
 
 from json import dumps
 from logging import getLogger
@@ -34,7 +34,7 @@ from .utils import (
 logger = getLogger(__name__)
 
 
-@click.group(name="uk_boards")
+@click.group(name="ukboards")
 @click.option(
     "--api-keys-path",
     "-a",
@@ -55,7 +55,7 @@ logger = getLogger(__name__)
     help="How many spaces to indent printing json queries.",
 )
 @click.pass_context
-def uk_boards(
+def ukboards(
     ctx: click.Context, indent: int, api_keys_path: click.Path
 ) -> int:
     """Query UK company and charity board data."""
@@ -77,7 +77,7 @@ def uk_boards(
     return 0
 
 
-@uk_boards.command()
+@ukboards.command()
 @click.argument("charity_id", type=CharityIDType, nargs=1)
 @click.option(
     "--api-key",
@@ -101,7 +101,7 @@ def charity(
     click.echo(charity_data)
 
 
-@uk_boards.command()
+@ukboards.command()
 @click.argument("company_id", type=CompanyIDType, nargs=1)
 @click.option(
     "--api-key",
@@ -124,7 +124,7 @@ def company(
     click.echo(dumps(company_json, indent=ctx.obj["indent"]))
 
 
-@uk_boards.command()
+@ukboards.command()
 @click.argument("csv_path", type=click.Path(exists=True), nargs=1)
 def csv_organisations(csv_path: click.Path):
     """Path to csv with company and charity ids."""
@@ -132,4 +132,4 @@ def csv_organisations(csv_path: click.Path):
 
 
 if __name__ == "__main__":
-    exit(uk_boards(obj={}))  # pragma: no cover
+    exit(ukboards(obj={}))  # pragma: no cover

@@ -9,7 +9,7 @@ from typing import Optional
 import pytest
 from dotenv import load_dotenv
 
-from uk_boards.utils import (
+from ukboards.utils import (
     DEFAULT_API_KEY_PATH,
     InternetConnectionError,
     get_external_ip_address,

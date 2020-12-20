@@ -18,7 +18,7 @@ from networkx import (
 )
 from networkx.algorithms import bipartite
 
-from uk_boards.companies import (
+from ukboards.companies import (
     COMPANIES_HOUSE_API_KEY_ENV_NAME,
     COMPANIES_HOUSE_APPOINTED_KEYWORD,
     COMPANIES_HOUSE_CEASED_KEYWORD,
@@ -40,8 +40,8 @@ from uk_boards.companies import (
     is_inactive,
     stringify_company_id,
 )
-from uk_boards.company_codes import COMPANIES_HOUSE_URI_CODES
-from uk_boards.utils import (
+from ukboards.company_codes import COMPANIES_HOUSE_URI_CODES
+from ukboards.utils import (
     CHECK_EXTERNAL_IP_ADDRESS_GOOGLE,
     DEFAULT_API_KEY_PATH,
     JSONDict,

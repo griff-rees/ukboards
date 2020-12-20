@@ -10,7 +10,7 @@ from typing import Dict
 import pytest
 from networkx import Graph
 
-from uk_boards.utils import (
+from ukboards.utils import (
     DEFAULT_LOG_FILE_NAME,
     POSTCODE_CURRENT,
     POSTCODE_TERMINATED,

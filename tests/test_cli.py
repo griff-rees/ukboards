@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Tests for `uk_boards` command line interface."""
+"""Tests for `ukboards` command line interface."""
 
 import inspect
 from typing import Final
@@ -8,8 +8,8 @@ from typing import Final
 import pytest
 from click.testing import CliRunner
 
-from uk_boards.cli import uk_boards
-from uk_boards.companies import COMPANIES_HOUSE_URL, CompanyIDType
+from ukboards.cli import ukboards
+from ukboards.companies import COMPANIES_HOUSE_URL, CompanyIDType
 
 PUNCHDRUNK_COMPANY_ID: Final[CompanyIDType] = "04547069"
 PUNCHDRUNK_JSON_SUBSET: Final[
@@ -17,7 +17,7 @@ PUNCHDRUNK_JSON_SUBSET: Final[
 ] = '{"status": "active", "company_name": "PUNCHDRUNK"}'
 
 CORRECT_HELP = """\
-Usage: uk_boards [OPTIONS] COMMAND [ARGS]...
+Usage: ukboards [OPTIONS] COMMAND [ARGS]...
 
   Query UK company and charity board data.
 
@@ -47,7 +47,7 @@ def convert_output_string(output: str) -> str:
 
 
 class TestMainCommandLineInterface:
-    """Test uk_boards root command line interface.
+    """Test ukboards root command line interface.
 
     Todo:
         * Add options for processing CSV files from the command line.
@@ -55,10 +55,10 @@ class TestMainCommandLineInterface:
 
     def test_command_line_interface(self, cli_runner):
         """Test the CLI."""
-        result = cli_runner.invoke(uk_boards)
+        result = cli_runner.invoke(ukboards)
         assert result.exit_code == 0
         assert CORRECT_HELP in result.output
-        help_result = cli_runner.invoke(uk_boards, ["--help"])
+        help_result = cli_runner.invoke(ukboards, ["--help"])
         assert help_result.exit_code == 0
         assert CORRECT_HELP in help_result.output
 
@@ -73,7 +73,7 @@ class TestCompaniesCommandLineInterface:
     COMPANIES_HELP: Final[
         str
     ] = """\
-    Usage: uk_boards company [OPTIONS] COMPANY_ID
+    Usage: ukboards company [OPTIONS] COMPANY_ID
 
       Query Companies House by company id.
 
@@ -83,7 +83,7 @@ class TestCompaniesCommandLineInterface:
 
     def test_companies_help(self, cli_runner):
         """Test help output for companies subcommand."""
-        result = cli_runner.invoke(uk_boards, ["company", "--help"])
+        result = cli_runner.invoke(ukboards, ["company", "--help"])
         assert result.exit_code == 0
         assert inspect.cleandoc(self.COMPANIES_HELP) in result.output
 
@@ -94,7 +94,7 @@ class TestCompaniesCommandLineInterface:
             json=PUNCHDRUNK_JSON_SUBSET,
         )
         result = cli_runner.invoke(
-            uk_boards, ["company", PUNCHDRUNK_COMPANY_ID]
+            ukboards, ["company", PUNCHDRUNK_COMPANY_ID]
         )
         assert convert_output_string(result.output) == PUNCHDRUNK_JSON_SUBSET
         assert caplog.records == []
@@ -108,7 +108,7 @@ class TestCharitiesCommandLineInterface:
     """Test Charity command line options."""
 
     CHARITIES_HELP: str = """\
-    Usage: uk_boards charity [OPTIONS] CHARITY_ID
+    Usage: ukboards charity [OPTIONS] CHARITY_ID
 
       Query Charities Commision by charity id.
 
@@ -124,7 +124,7 @@ class TestCharitiesCommandLineInterface:
 
     def test_charities_help(self, cli_runner):
         """Test help output for companies subcommand."""
-        result = cli_runner.invoke(uk_boards, ["charity", "--help"])
+        result = cli_runner.invoke(ukboards, ["charity", "--help"])
         assert result.exit_code == 0
         assert inspect.cleandoc(self.CHARITIES_HELP) in result.output
 
@@ -132,7 +132,7 @@ class TestCharitiesCommandLineInterface:
     def test_charities_query(self, cli_runner):
         """Test basic charity query."""
         result = cli_runner.invoke(
-            uk_boards, ["charity", str(self.PHOTOGRAPHERS_GALLERY_NUMBER)]
+            ukboards, ["charity", str(self.PHOTOGRAPHERS_GALLERY_NUMBER)]
         )
         assert result.exit_code == 0
         assert (

@@ -13,7 +13,7 @@ from requests import Response
 from zeep import Client
 from zeep.plugins import HistoryPlugin
 
-from uk_boards.charities import (
+from ukboards.charities import (
     CHARITY_COMMISSION_WSDL,
     CharitiesAuthPlugin,
     CharityIDType,
@@ -21,7 +21,7 @@ from uk_boards.charities import (
     get_charity_network,
     get_client,
 )
-from uk_boards.utils import CharityAPIKeyType
+from ukboards.utils import CharityAPIKeyType
 
 CHARITY_COMMISSION_API: Final[str] = CHARITY_COMMISSION_WSDL.split("?")[0]
 

@@ -124,7 +124,7 @@ Tips
 
 To run a subset of tests::
 
-$ pytest tests.test_uk_boards
+$ pytest tests.test_ukboards
 
 
 Deploying

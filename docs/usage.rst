@@ -4,7 +4,7 @@ Usage
 
 To use UK Boards in a project the following demonstrates it's use with a `csv` file of company and charity IDs::
 
-    >>> from uk_boards.uk_boards import OrganisationSequence
+    >>> from ukboards.ukboards import OrganisationSequence
     >>> os = OrganisationSequence(
         data_reader_params={
             'path': 'tests/organisation_sample.csv',
