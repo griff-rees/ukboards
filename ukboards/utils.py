@@ -41,7 +41,7 @@ LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
 LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
 
 JSON_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
-JSON_ADDITIONAL_DATA_KEY = "uk-boards-metadata"
+JSON_ADDITIONAL_DATA_KEY = "ukboards-metadata"
 METADATA_DATETIME_KEYS = ["start_time", "end_time"]
 
 logger = getLogger(__name__)

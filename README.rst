@@ -3,33 +3,33 @@ UK Boards
 =========
 
 
-.. image:: https://img.shields.io/pypi/v/uk-boards.svg
-        :target: https://pypi.python.org/pypi/uk-boards
+.. image:: https://img.shields.io/pypi/v/ukboards.svg
+        :target: https://pypi.python.org/pypi/ukboards
 
-.. image:: https://img.shields.io/travis/griff-rees/uk-boards.svg
-        :target: https://travis-ci.org/griff-rees/uk-boards
+.. image:: https://img.shields.io/travis/griff-rees/ukboards.svg
+        :target: https://travis-ci.org/griff-rees/ukboards
 
-.. image:: https://readthedocs.org/projects/uk-boards/badge/?version=latest
-        :target: https://uk-boards.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/ukboards/badge/?version=latest
+        :target: https://ukboards.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/griff-rees/uk-boards/shield.svg
-        :target: https://pyup.io/repos/github/griff-rees/uk-boards/
+.. image:: https://pyup.io/repos/github/griff-rees/ukboards/shield.svg
+        :target: https://pyup.io/repos/github/griff-rees/ukboards/
         :alt: Updates
 
-.. image:: https://img.shields.io/pypi/pyversions/uk-boards.svg
-        :target: https://img.shields.io/pypi/pyversions/uk-boards
+.. image:: https://img.shields.io/pypi/pyversions/ukboards.svg
+        :target: https://img.shields.io/pypi/pyversions/ukboards
         :alt: Supported Python Versions
 
-.. image:: https://codecov.io/gh/griff-rees/uk-boards/branch/master/graph/badge.svg
-        :target: https://codecov.io/gh/griff-rees/uk-boards
+.. image:: https://codecov.io/gh/griff-rees/ukboards/branch/master/graph/badge.svg
+        :target: https://codecov.io/gh/griff-rees/ukboards
 
 
 Query UK company and charity board networks.
 
 
 * Free software: MIT License
-* Documentation: https://uk-boards.readthedocs.io.
+* Documentation: https://ukboards.readthedocs.io.
 
 
 Features

@@ -14,7 +14,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/griff-rees/uk-boards/issues.
+Report bugs at https://github.com/griff-rees/ukboards/issues.
 
 If you are reporting a bug, please include:
 
@@ -44,7 +44,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/griff-rees/uk-boards/issues.
+The best way to send feedback is to file an issue at https://github.com/griff-rees/ukboards/issues.
 
 If you are proposing a feature:
 
@@ -56,19 +56,19 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `uk-boards` for local development.
+Ready to contribute? Here's how to set up `ukboards` for local development.
 
-1. Fork the `uk-boards` repo on GitHub.
+1. Fork the `ukboards` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/uk-boards.git
+    $ git clone git@github.com:your_name_here/ukboards.git
 
 3. Install your local fork with a local environment and pre-commit
    configuration. There are a number of options for this. If you have
    virtualenvwrapper this should work for setting up local development::
 
-    $ mkvirtualenv uk-boards
-    $ cd uk-boards/
+    $ mkvirtualenv ukboards
+    $ cd ukboards/
     $ python setup.py develop
     $ pre-commit install
 
@@ -116,7 +116,7 @@ Before you submit a pull request, check that it meets these guidelines:
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
 3. The pull request should work for Python 3.7 and 3.8, and for PyPy. Check
-   https://travis-ci.org/griff-rees/uk-boards/pull_requests
+   https://travis-ci.org/griff-rees/ukboards/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
 Tips
