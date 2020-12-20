@@ -2,6 +2,15 @@
 History
 =======
 
+0.5.0 (2020-12-20)
+------------------
+
+* Add classes for joint queries of companies and charities
+* Fix issues with Companies House pagination
+* Change library name from uk-boards to ukboards following PEP-8
+* Alpha-level customisation of networkx JSON network format
+* Options for adding geospatial data from postcodes.io
+
 0.4.0 (2020-01-07)
 ------------------
 
