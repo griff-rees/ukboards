@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-"""Unit test package for uk_boards."""
+"""Unit test package for ukboards."""

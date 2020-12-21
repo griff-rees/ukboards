@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Griffith Rees <griff.rees@gmail.com>
+* Griffith Rees <griffith.rees@sheffield.ac.uk>
 
 Contributors
 ------------
