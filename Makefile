@@ -51,7 +51,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	flake8 uk_boards tests
+	flake8 ukboards tests
 
 test: ## run tests quickly with the default Python
 	pytest
@@ -60,15 +60,15 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source uk_boards -m pytest
+	coverage run --source ukboards -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/uk_boards.rst
+	rm -f docs/ukboards.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ uk_boards
+	sphinx-apidoc -o docs/ ukboards
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
