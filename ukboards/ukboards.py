@@ -97,6 +97,14 @@ class OrganisationEntry:
         )
 
     @property
+    def active_ids(self) -> Generator[OrganisationIDsType, None, None]:
+        """Return active IDs of self."""
+        if self.charity_id and not self._skip_charity:
+            yield self.charity_id
+        if self.company_id and not self._skip_company:
+            yield self.company_id
+
+    @property
     def company_id(self) -> Optional[CompanyIDType]:
         """Return and cash entity's company_id if it exists."""
         if not hasattr(self, "_company_id"):

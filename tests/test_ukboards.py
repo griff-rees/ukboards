@@ -14,8 +14,11 @@ from networkx import Graph, connected_components
 from ukboards.ukboards import OrganisationSequence
 from ukboards.utils import (
     DEFAULT_LOG_FILE_NAME,
+    ORGANISATION_AUXILARY_NODE_DATA_KEY,
     NoMatchingDataPathError,
+    add_org_auxiliary_data,
     call_node_func,
+    call_org_sequence_func,
     ordinance_wrapper,
 )
 
@@ -462,6 +465,53 @@ def test_load_network_json_and_ego_networks(two_current_orgs, caplog):
         == len(company_network)
         == len(company_egos[0][0])
     )
+
+
+def test_load_network_json_io(two_current_orgs, caplog):
+    """Test loading an example company and charity json files."""
+    TEST_BOOKTRUST_CHARITY: Final = {
+        "Alternate name": "",
+        "line_number": 14,
+        "Company Number": BOOKTRUST_COMPANY_ID[2:],
+    }
+    TEST_11300109_TRUSTEE: Final = {
+        "Alternate name": None,
+        "line_number": None,
+        "Company Number": None,
+    }
+    DATA_TO_NODE_ATTR_KEYS: Final = {
+        "Alternate name": "alt_name",
+        "line_number": "line_number",
+    }
+    charity_network, company_network = two_current_orgs.read_networks(
+        path="tests", latest=True
+    )
+    call_org_sequence_func(
+        two_current_orgs,
+        charity_network,
+        add_org_auxiliary_data,
+        attr_names_dict=DATA_TO_NODE_ATTR_KEYS,
+    )
+
+    for key in TEST_BOOKTRUST_CHARITY:
+        assert (
+            charity_network.nodes[BOOKTRUST_CHARITY_ID][
+                ORGANISATION_AUXILARY_NODE_DATA_KEY
+            ][key]
+            == TEST_BOOKTRUST_CHARITY[key]
+        )
+
+    for key, value in DATA_TO_NODE_ATTR_KEYS.items():
+        assert (
+            charity_network.nodes[BOOKTRUST_CHARITY_ID][value]
+            == TEST_BOOKTRUST_CHARITY[key]
+        )
+
+    for key, value in DATA_TO_NODE_ATTR_KEYS.items():
+        assert (
+            charity_network.nodes[11300109][value]
+            == TEST_11300109_TRUSTEE[key]
+        )
 
 
 @pytest.mark.remote_data

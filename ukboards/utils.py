@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Utils for saving and loading network files, logging and ordinance data."""
 
+from collections.abc import MutableSequence
 from csv import DictReader
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,6 +15,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Final,
     Iterator,
     List,
     Optional,
@@ -24,25 +26,37 @@ from typing import (
 )
 
 import requests
-from networkx import Graph, node_link_data, node_link_graph
+from networkx import (
+    Graph,
+    node_link_data,
+    node_link_graph,
+    set_node_attributes,
+)
 from requests.exceptions import ConnectionError
 
-CHECK_EXTERNAL_IP_ADDRESS_GOOGLE = "https://domains.google.com/checkip"
+CHECK_EXTERNAL_IP_ADDRESS_GOOGLE: Final[
+    str
+] = "https://domains.google.com/checkip"
 
-POSTCODE_IO = "https://api.postcodes.io/"
-POSTCODE_CURRENT = POSTCODE_IO + "postcodes/"
-POSTCODE_TERMINATED = POSTCODE_IO + "terminated_postcodes/"
+POSTCODE_IO: Final[str] = "https://api.postcodes.io/"
+POSTCODE_CURRENT: Final[str] = POSTCODE_IO + "postcodes/"
+POSTCODE_TERMINATED: Final[str] = POSTCODE_IO + "terminated_postcodes/"
 
-DEFAULT_API_KEY_PATH = Path(".env")
-JSON_DATA_PATH = Path("data/json")
+DEFAULT_API_KEY_PATH: PathLike = Path(".env")
+JSON_DATA_PATH: PathLike = Path("data/json")
 
-LOG_FOLDER = Path("logs/")
-LOG_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S"
-LOG_FILENAME_DATE_FORMAT = "%Y-%m-%d-%H:%M:%S"
+LOG_FOLDER: PathLike = Path("logs/")
+LOG_TIME_FORMAT: Final[str] = "%a, %d %b %Y %H:%M:%S"
+LOG_FILENAME_DATE_FORMAT: Final[str] = "%Y-%m-%d-%H:%M:%S"
 
-JSON_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
-JSON_ADDITIONAL_DATA_KEY = "ukboards-metadata"
-METADATA_DATETIME_KEYS = ["start_time", "end_time"]
+JSON_DATE_FORMAT: Final[str] = "%Y-%m-%d %H:%M:%S.%f"
+JSON_ADDITIONAL_DATA_KEY: Final[str] = "ukboards-metadata"
+METADATA_DATETIME_KEYS: Final[List[str]] = ["start_time", "end_time"]
+
+ORGANISATION_AUXILARY_NODE_DATA_KEY: Final[str] = "org_auxiliary_data"
+ORGANISATION_AUXILARY_ATTR_NAMING_DICT_KEY: Final[
+    str
+] = "data_to_root_atr_mapping"
 
 logger = getLogger(__name__)
 
@@ -63,6 +77,8 @@ KindsIDType = Set[Optional[Union[str, int]]]
 KindsDict = Dict[str, KindsIDType]
 
 CSVRowType = Tuple[int, Dict[str, str]]
+
+NodeKeyType = Union[int, str, float]
 
 
 def formatted_now_str(date_format: str = LOG_FILENAME_DATE_FORMAT) -> str:
@@ -210,7 +226,7 @@ def get_ordinance_data(post_code: str) -> Optional[JSONDict]:
         raise InternetConnectionError
 
 
-def ordinance_wrapper(node_key: Union[int, str, float], data: JSONDict):
+def ordinance_wrapper(node_key: NodeKeyType, data: JSONDict) -> None:
     """Call ``get_ordinance_data`` on data and return a tuple with node_key."""
     address: Dict[str, str]
     post_code: Optional[str] = None
@@ -245,7 +261,7 @@ def ordinance_wrapper(node_key: Union[int, str, float], data: JSONDict):
     )
 
 
-def call_node_func(graph: Graph, func: Callable) -> Graph:
+def call_node_func(graph: Graph, func: Callable) -> None:
     """Call a function iterating on all graph nodes."""
     try:
         for node in graph.nodes(data=True):
@@ -255,6 +271,44 @@ def call_node_func(graph: Graph, func: Callable) -> Graph:
             f"{graph} passed which must be a Graph "
             f"object so {func} cannot be run."
         )
+
+
+def call_org_sequence_func(
+    orgs: MutableSequence,
+    graph: Graph,
+    func: Callable,
+    attr_names_dict: Optional[Dict[str, str]],
+    initiate_attr_names: bool = True,
+    *args,
+    **kwargs,
+) -> None:
+    """Apply func to orgs with optional graph and return a graph."""
+    if initiate_attr_names and attr_names_dict:
+        for attr_name in attr_names_dict.values():
+            set_node_attributes(graph, None, attr_name)
+    for org in orgs:
+        func(org, graph, attr_names_dict, *args, **kwargs)
+
+
+def add_org_auxiliary_data(
+    organisation: Any,
+    graph: Graph,
+    attr_names_dict: Optional[Dict[str, str]],
+    data_dict_key: str = ORGANISATION_AUXILARY_NODE_DATA_KEY,
+    attr_names_dict_key: str = ORGANISATION_AUXILARY_ATTR_NAMING_DICT_KEY,
+) -> None:
+    """Add auxiliary organisation data to nodes in graph."""
+    for org_id in organisation.active_ids:
+        if org_id in graph:
+            graph.nodes[org_id][data_dict_key] = organisation.data
+            if attr_names_dict:
+                for data_attr_name, node_attr_name in attr_names_dict.items():
+                    graph.nodes[org_id][node_attr_name] = organisation.data[
+                        data_attr_name
+                    ]
+                graph.nodes[org_id][data_dict_key][
+                    attr_names_dict_key
+                ] = attr_names_dict
 
 
 def set_node_data_func(graph: Graph, name: str, func: Callable) -> Graph:
