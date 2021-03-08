@@ -2,6 +2,11 @@
 History
 =======
 
+0.5.1 (2021-03-08)
+------------------
+
+* Add utility for attaching auxilary data to nodes
+
 0.5.0 (2020-12-20)
 ------------------
 
