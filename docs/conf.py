@@ -47,9 +47,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'UK Boards'
-copyright = u"2019, Griffith Rees"
-author = u"Griffith Rees"
+project = "UK Boards"
+copyright = "2020, Griffith Rees"
+author = "Griffith Rees"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -129,8 +129,8 @@ latex_elements = {
 # [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'ukboards.tex',
-     u'UK Boards Documentation',
-     u'Griffith Rees', 'manual'),
+     'UK Boards Documentation',
+     'Griffith Rees', 'manual'),
 ]
 
 
@@ -140,7 +140,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (master_doc, 'ukboards',
-     u'UK Boards Documentation',
+     'UK Boards Documentation',
      [author], 1)
 ]
 
@@ -152,7 +152,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'ukboards',
-     u'UK Boards Documentation',
+     'UK Boards Documentation',
      author,
      'ukboards',
      'One line description of project.',
