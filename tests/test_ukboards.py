@@ -467,7 +467,9 @@ def test_load_network_json_and_ego_networks(two_current_orgs, caplog):
     )
 
 
-def test_load_network_json_io(two_current_orgs, caplog):
+def test_load_network_json_and_add_auxiliary_data(
+    two_current_orgs, caplog
+) -> None:
     """Test loading an example company and charity json files."""
     TEST_BOOKTRUST_CHARITY: Final = {
         "Alternate name": "",
