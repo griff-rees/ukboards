@@ -676,7 +676,7 @@ def test_filter_active_board(requests_mock, test_mock_api_get, caplog) -> None:
 
 
 skipped_for_deprecation = pytest.mark.skip(
-    "This test is deprecated and " "will be removed."
+    "This test is deprecated and will be removed."
 )
 
 
