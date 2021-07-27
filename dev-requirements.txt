@@ -12,7 +12,7 @@ pytest-remotedata==0.3.2
 pytest-runner==5.3.1
 pytest-sugar==0.9.4
 requests-mock==1.9.3
-Sphinx==4.0.2
+Sphinx==4.1.2
 tox==3.23.1
 twine==3.4.1
 watchdog==2.1.3
