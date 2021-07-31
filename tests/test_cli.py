@@ -25,7 +25,6 @@ Options:
   -a, --api-keys-path FILE  Path to file with API keys (default=.env)
   -i, --indent INTEGER      How many spaces to indent printing json queries.
                             [default: 2]
-
   --help                    Show this message and exit.
 
 Commands:
