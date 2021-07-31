@@ -1,5 +1,5 @@
 Click==8.0.1
-networkx==2.5
+networkx==2.6.1
 requests==2.25.1
 zeep==4.0.0
-python-dotenv==0.15.0
+python-dotenv==0.18.0

@@ -8,6 +8,7 @@ from typing import Optional
 
 import pytest
 from dotenv import load_dotenv
+from networkx import Graph
 
 from ukboards.utils import (
     DEFAULT_API_KEY_PATH,
@@ -36,3 +37,13 @@ skip_if_not_allowed_ip = pytest.mark.skipif(
         "Fails unless ip address is registered for Companies House api key."
     ),
 )
+
+
+@pytest.fixture
+def simple_graph():
+    """Return a basic graph for testing input/output."""
+    g = Graph()
+    g.add_node("034", bipartite=0, name="comp", data={"some": "data"})
+    g.add_node("1a", bipartite=1, name="jule", data={"mode": "data-y"})
+    g.add_edge("034", "1a", weight=2, data={"edgey": "data"})
+    return g
