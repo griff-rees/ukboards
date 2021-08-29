@@ -24,6 +24,9 @@ UK Boards
 .. image:: https://codecov.io/gh/griff-rees/ukboards/branch/master/graph/badge.svg
         :target: https://codecov.io/gh/griff-rees/ukboards
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4381055.svg
+        :target: https://doi.org/10.5281/zenodo.4381055
+
 
 Query UK company and charity board networks.
 
