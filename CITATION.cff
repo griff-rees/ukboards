@@ -1,0 +1,9 @@
+cff-version: 0.5.3
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Griffith
+    given-names: Rees
+    orcid: https://orcid.org/0000-0001-7281-4116
+title: griff-rees/ukboards: Update continuous integration for travis.com
+version: v0.5.3
+date-released: 2017-12-18
