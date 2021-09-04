@@ -8,17 +8,14 @@ deploy:
   - provider: pypi
     server: https://test.pypi.org/legacy/
     distributions: sdist bdist_wheel
-    skip_cleanup: true
     user: __token__
-    password:
-      secure: $PYPI_SECRET_TEST_TOKEN
+    password: $PYPI_SECRET_TEST_TOKEN
     on:
       repo: $repo
       python: 3.8
       branch: main
   - provider: pypi
     distributions: sdist bdist_wheel
-    skip_cleanup: true
     user: __token__
     password:
       secure: $PYPI_SECRET_TOKEN
