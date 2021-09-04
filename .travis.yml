@@ -12,6 +12,7 @@ deploy:
     skip_cleanup: true
     password: $PYPI_TEST_TOKEN
     on:
+      tags: true
       repo: $repo
       python: 3.8
       branch: main
@@ -25,3 +26,4 @@ deploy:
       tags: true
       repo: $repo
       python: 3.8
+      branch: main
