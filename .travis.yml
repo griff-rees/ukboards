@@ -15,6 +15,7 @@ deploy:
     on:
       repo: $repo
       python: 3.8
+      branch: main
   - provider: pypi
     distributions: sdist bdist_wheel
     skip_cleanup: true
