@@ -2,6 +2,13 @@
 History
 =======
 
+0.5.2 (2021-04-09)
+------------------
+
+* Add Zenodo badge to README
+* Remove remaining references to uk-boards
+* Update dependencies
+
 0.5.1 (2021-03-08)
 ------------------
 
