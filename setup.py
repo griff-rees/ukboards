@@ -60,7 +60,7 @@ setup(
     tests_require=test_requirements,
     url="https://github.com/griff-rees/ukboards",
     # fmt: off
-    version='0.5.2',
+    version='0.5.3',
     # fmt: on
     zip_safe=False,
 )
