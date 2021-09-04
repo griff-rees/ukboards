@@ -5,13 +5,23 @@ python:
 install: pip install -U tox-travis
 script: tox
 deploy:
-  provider: pypi
-  server: https://test.pypi.org/legacy/
-  distributions: sdist bdist_wheel
-  skip_cleanup: true
-  user: __token__
-  password: $PYPI_TEST_TOKEN
-  on:
-    repo: griff-rees/ukboards
-    python: 3.8
-    branch: main
+  - provider: pypi
+    server: https://test.pypi.org/legacy/
+    distributions: sdist bdist_wheel
+    skip_cleanup: true
+    user: __token__
+    password:
+      secure: $PYPI_SECRET_TEST_TOKEN
+    on:
+      repo: $repo
+      python: 3.8
+  - provider: pypi
+    distributions: sdist bdist_wheel
+    skip_cleanup: true
+    user: __token__
+    password:
+      secure: $PYPI_SECRET_TOKEN
+    on:
+      tags: true
+      repo: $repo
+      python: 3.8
