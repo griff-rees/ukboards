@@ -1,10 +1,18 @@
-cff-version: 0.5.4
-message: "If you use this software, please cite it as below."
-authors:
-  - family-names: Griffith
-    given-names: Rees
-    orcid: https://orcid.org/0000-0001-7281-4116
+cff-version: 0.1.2
 title: "ukboards: a python library for querying UK board interlock network data"
-version: v0.5.4
+abstract: "A Python library for snowball sampling company and charity board (interlock) network data from the UK Companies House and Charities Commission APIs. Built on NetworkX bimodal (bipartite) configuration. Optional Geospatial data at the postcode level is implemented via the postcodes.io API. Can export a modification of the standard NetworkX JSON structure with additional meta data including timestamps and query parameters."
+message: "If you use this software, please cite it as below."
+license: MIT
+authors:
+  - affiliation: "The Alan Turing Institute"
+    family-names: Rees
+    given-names: Griffith
+    orcid: https://orcid.org/000-0001-7281-4116
+  - affiliation: "University of Sheffield"
+    family-names: Taylor
+    given-names: Mark
+    orcid: https://orcid.org/0000-0001-5943-9796
+version: v0.5.5
+repository-code: https://github.com/griff-rees/ukboards
 doi: 10.5281/zenodo.4381054
-date-released: 2017-12-18
+date-released: 2021-09-05
