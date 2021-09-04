@@ -20,8 +20,7 @@ deploy:
     distributions: sdist bdist_wheel
     skip_cleanup: true
     user: __token__
-    password:
-      secure: $PYPI_SECRET_TOKEN
+    password: $PYPI_TOKEN
     on:
       tags: true
       repo: $repo
