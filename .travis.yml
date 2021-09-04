@@ -10,7 +10,7 @@ deploy:
   distributions: sdist bdist_wheel
   skip_cleanup: true
   user: __token__
-  password: $PYPI-TEST-TOKEN
+  password: $PYPI_TEST_TOKEN
   on:
     repo: griff-rees/ukboards
     python: 3.8
