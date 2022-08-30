@@ -10,7 +10,7 @@ pytest-benchmark==3.4.1
 pytest-cov==3.0.0
 pytest-remotedata==0.3.3
 pytest-sugar==0.9.5
-requests-mock==1.9.3
+requests-mock==1.10.0
 tox==3.25.1
 Sphinx==5.1.1
 twine==4.0.1
